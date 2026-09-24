@@ -16,9 +16,11 @@ struct RoundIntroView: View {
         let plan = session.currentPlan
         ZStack {
             VStack(spacing: 6) {
-                Text("Round \(session.roundNumber) of \(session.roundCount)")
+                Text("\(Localization.string(session.pack.nameKey)) · Round \(session.roundNumber) of \(session.roundCount)")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                 Text("Sort by \(session.dimensionName(for: plan))")
                     .font(.headline)
                     .multilineTextAlignment(.center)

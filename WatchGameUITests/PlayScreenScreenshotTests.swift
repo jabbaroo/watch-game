@@ -34,9 +34,9 @@ nonisolated final class PlayScreenScreenshotTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = launchArguments
         app.launch()
-        XCTAssertTrue(app.buttons["Play"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["play.shapes-colours"].waitForExistence(timeout: 5))
         attach("home", app)
-        app.buttons["Play"].tap()
+        app.buttons["play.shapes-colours"].tap()
         attach("round-intro", app)
         XCTAssertTrue(app.buttons["Pause"].waitForExistence(timeout: 6), "play screen did not appear")
         attach(name, app)

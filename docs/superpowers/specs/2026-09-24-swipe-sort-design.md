@@ -177,7 +177,7 @@ Because the streak resets on any error, the pitch resets with it.
 
 Navigation is a `NavigationStack` rooted at Home. Play is presented as a full screen cover with no navigation bar.
 
-1. Home: title, Play, Daily challenge (shows today's status and the streak), History, Settings. Version 1 always plays the built-in pack; a pack picker arrives with the first image pack.
+1. Home: title, a Games list with one row per installed pack (tap to play), Daily challenge (shows today's status and the streak), History, Settings.
 2. Round interstitial: round number, rule, edge mapping preview, lives, score, countdown ring. Tap to start now.
 3. Play: a thin round-clock bar along the top, lives and score in the top corners, the item in the centre with a shrinking ring, category labels at the active edges. A small pause button sits in a bottom corner, clear of the down-edge label, and also carries the Double Tap shortcut.
 4. Paused: Resume (Double Tap shortcut) and Quit run with a confirmation. Quit returns to Home.
@@ -338,7 +338,7 @@ Principle: every mode is a variant of the one flick loop the hand already knows.
 - A new visual, `word(textKey:colour:)`, draws a localised word in a colour. The colour-hints setting does not apply to words.
 - Rounds rotate ink, word, ink, word: sorting by ink is the classic Stroop task, sorting by the word's meaning is the reverse Stroop. Category labels reuse the colour names.
 - Headline metric, interference cost: mean correct reaction time on incongruent items minus congruent ones, over the whole run, shown on Results as "Interference" when there are at least 3 of each. The engine defines congruence generically as "every dimension carries the same value id", so the metric is nil for packs where ids never match.
-- Home gains a mode: Play starts the last-used pack and shows its name; a "Mode" row picks between packs when more than one is installed. The daily challenge keeps using the shapes pack.
+- Home lists the games: one row per installed pack with its name and description, and tapping a row starts that game at once (no separate Play button or picker). The round intro names the game. The daily challenge keeps using the shapes pack.
 - Results and History show the pack name.
 
 ### 13.2 Go, no-go (built)

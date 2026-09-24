@@ -12,30 +12,31 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    Button {
-                        startRun(daily: false)
-                    } label: {
-                        Label("Play", systemImage: "play.fill")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .listRowBackground(Color.clear)
-
-                    if environment.packs.count > 1 {
-                        NavigationLink {
-                            ModePickerView()
+                Section("Games") {
+                    ForEach(environment.packs) { pack in
+                        Button {
+                            startRun(daily: false, packID: pack.id)
                         } label: {
                             HStack {
-                                Label("Mode", systemImage: "square.grid.2x2")
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(Localization.string(pack.nameKey))
+                                        .font(.headline)
+                                    if let key = pack.descriptionKey {
+                                        Text(Localization.string(key))
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
                                 Spacer()
-                                Text(Localization.string((environment.pack(id: packID) ?? environment.pack).nameKey))
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
+                                Image(systemName: "play.fill")
+                                    .foregroundStyle(Color.accentColor)
                             }
                         }
+                        .accessibilityIdentifier("play.\(pack.id)")
+                        .accessibilityLabel(Text("Play \(Localization.string(pack.nameKey))"))
                     }
-
+                }
+                Section {
                     Button {
                         startRun(daily: true)
                     } label: {
@@ -66,7 +67,7 @@ struct HomeView: View {
             if let session = environment.session {
                 RunView(
                     session: session,
-                    onPlayAgain: { startRun(daily: session.isDaily) },
+                    onPlayAgain: { startRun(daily: session.isDaily, packID: session.isDaily ? nil : session.pack.id) },
                     onDismiss: dismissRun
                 )
                 .id(ObjectIdentifier(session))
@@ -93,9 +94,12 @@ struct HomeView: View {
         return played ? String(localized: "Done today · \(streakText)") : streakText
     }
 
-    private func startRun(daily: Bool) {
+    private func startRun(daily: Bool, packID: String? = nil) {
         environment.applySettings()
-        environment.startRun(daily: daily)
+        if let packID {
+            self.packID = packID
+        }
+        environment.startRun(daily: daily, packID: packID)
         isRunPresented = true
     }
 

@@ -5932,9 +5932,11 @@ struct RoundIntroView: View {
         let plan = session.currentPlan
         ZStack {
             VStack(spacing: 6) {
-                Text("Round \(session.roundNumber) of \(session.roundCount)")
+                Text("\(Localization.string(session.pack.nameKey)) · Round \(session.roundNumber) of \(session.roundCount)")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                 Text("Sort by \(session.dimensionName(for: plan))")
                     .font(.headline)
                     .multilineTextAlignment(.center)
@@ -6826,30 +6828,31 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    Button {
-                        startRun(daily: false)
-                    } label: {
-                        Label("Play", systemImage: "play.fill")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .listRowBackground(Color.clear)
-
-                    if environment.packs.count > 1 {
-                        NavigationLink {
-                            ModePickerView()
+                Section("Games") {
+                    ForEach(environment.packs) { pack in
+                        Button {
+                            startRun(daily: false, packID: pack.id)
                         } label: {
                             HStack {
-                                Label("Mode", systemImage: "square.grid.2x2")
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(Localization.string(pack.nameKey))
+                                        .font(.headline)
+                                    if let key = pack.descriptionKey {
+                                        Text(Localization.string(key))
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
                                 Spacer()
-                                Text(Localization.string((environment.pack(id: packID) ?? environment.pack).nameKey))
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
+                                Image(systemName: "play.fill")
+                                    .foregroundStyle(Color.accentColor)
                             }
                         }
+                        .accessibilityIdentifier("play.\(pack.id)")
+                        .accessibilityLabel(Text("Play \(Localization.string(pack.nameKey))"))
                     }
-
+                }
+                Section {
                     Button {
                         startRun(daily: true)
                     } label: {
@@ -6880,7 +6883,7 @@ struct HomeView: View {
             if let session = environment.session {
                 RunView(
                     session: session,
-                    onPlayAgain: { startRun(daily: session.isDaily) },
+                    onPlayAgain: { startRun(daily: session.isDaily, packID: session.isDaily ? nil : session.pack.id) },
                     onDismiss: dismissRun
                 )
                 .id(ObjectIdentifier(session))
@@ -6907,9 +6910,12 @@ struct HomeView: View {
         return played ? String(localized: "Done today · \(streakText)") : streakText
     }
 
-    private func startRun(daily: Bool) {
+    private func startRun(daily: Bool, packID: String? = nil) {
         environment.applySettings()
-        environment.startRun(daily: daily)
+        if let packID {
+            self.packID = packID
+        }
+        environment.startRun(daily: daily, packID: packID)
         isRunPresented = true
     }
 
@@ -7476,9 +7482,9 @@ nonisolated final class PlayScreenScreenshotTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = launchArguments
         app.launch()
-        XCTAssertTrue(app.buttons["Play"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["play.shapes-colours"].waitForExistence(timeout: 5))
         attach("home", app)
-        app.buttons["Play"].tap()
+        app.buttons["play.shapes-colours"].tap()
         attach("round-intro", app)
         XCTAssertTrue(app.buttons["Pause"].waitForExistence(timeout: 6), "play screen did not appear")
         attach(name, app)
@@ -8171,8 +8177,8 @@ nonisolated final class LaunchAndPlayTests: XCTestCase {
     func testLaunchPlayShowsFirstItem() {
         let app = XCUIApplication()
         app.launch()
-        XCTAssertTrue(app.buttons["Play"].waitForExistence(timeout: 5))
-        app.buttons["Play"].tap()
+        XCTAssertTrue(app.buttons["play.shapes-colours"].waitForExistence(timeout: 5))
+        app.buttons["play.shapes-colours"].tap()
         // Round intro auto-starts after 2.5 seconds; the item is the only element with a category label.
         let pause = app.buttons["Pause"]
         XCTAssertTrue(pause.waitForExistence(timeout: 6), "play screen did not appear")
