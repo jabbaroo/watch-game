@@ -38,6 +38,16 @@
                ReferencedContainer = "container:WatchGame.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "AA000000000000000000A500"
+               BuildableName = "WatchGameUITests.xctest"
+               BlueprintName = "WatchGameUITests"
+               ReferencedContainer = "container:WatchGame.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

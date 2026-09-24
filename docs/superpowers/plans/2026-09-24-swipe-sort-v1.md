@@ -5967,6 +5967,7 @@ git commit -m "feat(app): results screen with error breakdown and switch cost"
 `WatchGameTests/LaunchRequestsTests.swift`:
 
 ```swift
+import Foundation
 import Testing
 @testable import WatchGame
 
@@ -5987,8 +5988,6 @@ import Testing
     }
 }
 ```
-
-Add `import Foundation` at the top of that test file.
 
 - [ ] **Step 2: Run the test to verify it fails**
 
@@ -7286,7 +7285,8 @@ Add the group to the main group, the product to Products, and the target to `tar
 ```swift
 import XCTest
 
-final class LaunchAndPlayTests: XCTestCase {
+// nonisolated: the app target defaults to main-actor isolation, but XCTestCase initialisers are nonisolated.
+nonisolated final class LaunchAndPlayTests: XCTestCase {
     @MainActor
     func testLaunchPlayShowsFirstItem() {
         let app = XCUIApplication()
