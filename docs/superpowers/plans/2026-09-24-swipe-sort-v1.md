@@ -4605,6 +4605,7 @@ extension AppEnvironment {
     }
 
     /// Most common start hour over the last 30 completed runs, when there are at least 3.
+    /// Ties resolve to the earliest hour.
     func usualPlayHour(calendar: Calendar = .current) -> Int? {
         let runs = history.completedRuns(limit: 30)
         guard runs.count >= 3 else { return nil }
@@ -6038,12 +6039,11 @@ import SwipeSortEngine
 struct HomeView: View {
     @Environment(AppEnvironment.self) private var environment
     @State private var isRunPresented = false
-    @State private var launchRequests = LaunchRequests.shared
+    private let launchRequests = LaunchRequests.shared
 
     private var todayKey: String { DailySeed.dayKey(for: .now) }
 
     var body: some View {
-        @Bindable var environment = environment
         NavigationStack {
             List {
                 Section {
@@ -6082,7 +6082,7 @@ struct HomeView: View {
             }
             .navigationTitle("Swipe Sort")
         }
-        .fullScreenCover(isPresented: $isRunPresented) {
+        .fullScreenCover(isPresented: $isRunPresented, onDismiss: dismissRun) {
             if let session = environment.session {
                 RunView(
                     session: session,
@@ -6090,7 +6090,11 @@ struct HomeView: View {
                     onDismiss: dismissRun
                 )
                 .id(ObjectIdentifier(session))
+                .interactiveDismissDisabled()
             }
+        }
+        .onChange(of: environment.session?.summary?.endReason) { _, reason in
+            if reason != nil { environment.refreshWidgetSummary() }
         }
         .onOpenURL { url in
             if LaunchRequests.isDailyURL(url) {
@@ -6529,7 +6533,7 @@ struct HistoryView: View {
             LineMark(x: .value("Run", point.index), y: .value("Value", value(point)))
                 .interpolationMethod(.monotone)
             PointMark(x: .value("Run", point.index), y: .value("Value", value(point)))
-                .symbolSize(10)
+                .symbolSize(20)
         }
         .chartXAxis(.hidden)
         .chartYAxis { AxisMarks(values: .automatic(desiredCount: 3)) }
@@ -6546,9 +6550,15 @@ struct HistoryView: View {
                     if run.isDaily {
                         Image(systemName: "calendar").font(.system(size: 9))
                     }
-                    Text(run.completed ? "\(run.roundsCompleted) rounds" : "Incomplete")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                    Group {
+                        if run.completed {
+                            Text("\(run.roundsCompleted) rounds")
+                        } else {
+                            Text("Incomplete")
+                        }
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
                 }
             }
             Spacer()
@@ -6606,12 +6616,12 @@ export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Develope
 cd "$(dirname "$0")/.."
 OUT=docs/screenshots
 mkdir -p "$OUT"
-DEVICES=("Apple Watch Series 9 (41mm)" "Apple Watch Series 11 (42mm)" "Apple Watch SE 3 (44mm)" "Apple Watch Series 9 (45mm)" "Apple Watch Series 11 (46mm)" "Apple Watch Ultra 3 (49mm)")
+DEVICES=("Apple Watch SE 3 (40mm)" "Apple Watch Series 9 (41mm)" "Apple Watch Series 11 (42mm)" "Apple Watch SE 3 (44mm)" "Apple Watch Series 9 (45mm)" "Apple Watch Series 11 (46mm)" "Apple Watch Ultra 3 (49mm)")
 xcodebuild -project WatchGame.xcodeproj -scheme WatchGame -destination 'generic/platform=watchOS Simulator' \
   -derivedDataPath .build/DerivedData -quiet CODE_SIGNING_ALLOWED=NO build
 APP=.build/DerivedData/Build/Products/Debug-watchsimulator/WatchGame.app
 for device in "${DEVICES[@]}"; do
-  udid=$(xcrun simctl list devices available | grep "$device (" | head -1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')
+  udid=$(xcrun simctl list devices available | grep "$device (" | head -1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/' || true)
   if [ -z "$udid" ]; then echo "skip: $device not available"; continue; fi
   xcrun simctl boot "$udid" 2>/dev/null || true
   xcrun simctl bootstatus "$udid" -b >/dev/null
@@ -6690,7 +6700,10 @@ with tempfile.TemporaryDirectory() as tmp:
     subprocess.run(["qlmanage", "-t", "-s", "1024", "-o", tmp, str(svg)], check=True, capture_output=True)
     png = pathlib.Path(tmp) / "icon.svg.png"
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["sips", "-s", "format", "png", "--resampleHeightWidth", "1024", "1024", str(png), "--out", str(OUT)], check=True, capture_output=True)
+    # App Store icons must have no alpha channel; a JPEG round trip flattens it.
+    jpg = pathlib.Path(tmp) / "icon.jpg"
+    subprocess.run(["sips", "-s", "format", "jpeg", "-s", "formatOptions", "100", str(png), "--out", str(jpg)], check=True, capture_output=True)
+    subprocess.run(["sips", "-s", "format", "png", str(jpg), "--out", str(OUT)], check=True, capture_output=True)
     print(f"wrote {OUT.relative_to(ROOT)}")
 ```
 
@@ -7312,8 +7325,11 @@ Expected: `TESTS OK`.
 ```markdown
 # Release checklist
 
+## Tests
+- [ ] `Scripts/engine-test.sh` and `Scripts/test.sh` pass (unit and UI).
+
 ## Simulator layout pass
-- [ ] `Scripts/screenshots.sh` runs clean on 41, 42, 44, 45, 46 and 49 mm.
+- [ ] `Scripts/screenshots.sh` runs clean on 40, 41, 42, 44, 45, 46 and 49 mm.
 - [ ] Play screen on 41 mm with Tap to sort on: no label overlaps the item; every label is at least 44 pt tall.
 
 ## Hardware pass (one watch per size class if possible)

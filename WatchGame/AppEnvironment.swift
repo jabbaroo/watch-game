@@ -89,6 +89,7 @@ extension AppEnvironment {
     }
 
     /// Most common start hour over the last 30 completed runs, when there are at least 3.
+    /// Ties resolve to the earliest hour.
     func usualPlayHour(calendar: Calendar = .current) -> Int? {
         let runs = history.completedRuns(limit: 30)
         guard runs.count >= 3 else { return nil }

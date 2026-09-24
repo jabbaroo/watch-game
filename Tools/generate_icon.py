@@ -21,5 +21,8 @@ with tempfile.TemporaryDirectory() as tmp:
     subprocess.run(["qlmanage", "-t", "-s", "1024", "-o", tmp, str(svg)], check=True, capture_output=True)
     png = pathlib.Path(tmp) / "icon.svg.png"
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["sips", "-s", "format", "png", "--resampleHeightWidth", "1024", "1024", str(png), "--out", str(OUT)], check=True, capture_output=True)
+    # App Store icons must have no alpha channel; a JPEG round trip flattens it.
+    jpg = pathlib.Path(tmp) / "icon.jpg"
+    subprocess.run(["sips", "-s", "format", "jpeg", "-s", "formatOptions", "100", str(png), "--out", str(jpg)], check=True, capture_output=True)
+    subprocess.run(["sips", "-s", "format", "png", str(jpg), "--out", str(OUT)], check=True, capture_output=True)
     print(f"wrote {OUT.relative_to(ROOT)}")

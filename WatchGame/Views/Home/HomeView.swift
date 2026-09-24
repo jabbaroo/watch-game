@@ -4,12 +4,11 @@ import SwipeSortEngine
 struct HomeView: View {
     @Environment(AppEnvironment.self) private var environment
     @State private var isRunPresented = false
-    @State private var launchRequests = LaunchRequests.shared
+    private let launchRequests = LaunchRequests.shared
 
     private var todayKey: String { DailySeed.dayKey(for: .now) }
 
     var body: some View {
-        @Bindable var environment = environment
         NavigationStack {
             List {
                 Section {
@@ -48,7 +47,7 @@ struct HomeView: View {
             }
             .navigationTitle("Swipe Sort")
         }
-        .fullScreenCover(isPresented: $isRunPresented) {
+        .fullScreenCover(isPresented: $isRunPresented, onDismiss: dismissRun) {
             if let session = environment.session {
                 RunView(
                     session: session,
@@ -56,7 +55,11 @@ struct HomeView: View {
                     onDismiss: dismissRun
                 )
                 .id(ObjectIdentifier(session))
+                .interactiveDismissDisabled()
             }
+        }
+        .onChange(of: environment.session?.summary?.endReason) { _, reason in
+            if reason != nil { environment.refreshWidgetSummary() }
         }
         .onOpenURL { url in
             if LaunchRequests.isDailyURL(url) {

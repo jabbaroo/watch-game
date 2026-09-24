@@ -1,7 +1,10 @@
 # Release checklist
 
+## Tests
+- [ ] `Scripts/engine-test.sh` and `Scripts/test.sh` pass (unit and UI).
+
 ## Simulator layout pass
-- [ ] `Scripts/screenshots.sh` runs clean on 41, 42, 44, 45, 46 and 49 mm.
+- [ ] `Scripts/screenshots.sh` runs clean on 40, 41, 42, 44, 45, 46 and 49 mm.
 - [ ] Play screen on 41 mm with Tap to sort on: no label overlaps the item; every label is at least 44 pt tall.
 
 ## Hardware pass (one watch per size class if possible)

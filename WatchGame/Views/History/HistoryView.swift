@@ -83,7 +83,7 @@ struct HistoryView: View {
             LineMark(x: .value("Run", point.index), y: .value("Value", value(point)))
                 .interpolationMethod(.monotone)
             PointMark(x: .value("Run", point.index), y: .value("Value", value(point)))
-                .symbolSize(10)
+                .symbolSize(20)
         }
         .chartXAxis(.hidden)
         .chartYAxis { AxisMarks(values: .automatic(desiredCount: 3)) }
@@ -100,9 +100,15 @@ struct HistoryView: View {
                     if run.isDaily {
                         Image(systemName: "calendar").font(.system(size: 9))
                     }
-                    Text(run.completed ? "\(run.roundsCompleted) rounds" : "Incomplete")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                    Group {
+                        if run.completed {
+                            Text("\(run.roundsCompleted) rounds")
+                        } else {
+                            Text("Incomplete")
+                        }
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
                 }
             }
             Spacer()
