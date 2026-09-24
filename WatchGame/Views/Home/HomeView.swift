@@ -84,6 +84,7 @@ struct HomeView: View {
     private func dismissRun() {
         isRunPresented = false
         environment.session = nil
+        environment.refreshWidgetSummary()
     }
 
     /// Starts the daily if the widget or an intent asked for it and no run is in progress.

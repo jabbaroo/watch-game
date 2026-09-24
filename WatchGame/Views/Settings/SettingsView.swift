@@ -42,6 +42,7 @@ struct SettingsView: View {
         .confirmationDialog("Reset all history?", isPresented: $confirmingReset, titleVisibility: .visible) {
             Button("Reset", role: .destructive) {
                 environment.history.reset()
+                environment.refreshWidgetSummary()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
