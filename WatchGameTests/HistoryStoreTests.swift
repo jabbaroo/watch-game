@@ -67,8 +67,9 @@ import SwipeSortEngine
 
     @Test func dailyStreakCountsConsecutiveDays() throws {
         let store = try makeStore()
-        let calendar = Calendar(identifier: .gregorian)
-        let today = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_790_208_000)) // 2026-09-24
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        let today = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_790_208_000)) // 2026-09-24 UTC
         func play(daysAgo: Int, completed: Bool = true) {
             let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
             let key = DailySeed.dayKey(for: date, calendar: calendar)

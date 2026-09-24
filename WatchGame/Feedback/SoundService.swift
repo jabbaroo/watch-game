@@ -81,7 +81,7 @@ final class EngineSound: SoundService {
 
     private func configure(bundle: Bundle) throws {
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+        try session.setCategory(.ambient, mode: .default, options: [])
         try session.setActive(true)
 
         for asset in SoundAsset.allCases {

@@ -171,7 +171,7 @@ public struct RunState: Sendable, Equatable {
         return [.itemShown(active), .wake(at: min(active.deadline, roundDeadline(at: now)))]
     }
 
-    private mutating func resolve(_ active: ActiveItem, answeredEdge: Edge?, at now: Duration) -> [RunEffect] {
+    private mutating func resolve(_ active: ActiveItem, answeredEdge: SwipeEdge?, at now: Duration) -> [RunEffect] {
         let plan = currentPlan
         let timedOut = answeredEdge == nil
         let correct = answeredEdge == active.expectedEdge

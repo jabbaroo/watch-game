@@ -36,7 +36,7 @@ WatchGame/                                    repo root
 │   │   ├── BuiltInPacks.swift                ContentPack.shapesAndColours
 │   │   ├── RunConfiguration.swift            tunables and window schedule
 │   │   ├── ScoringRules.swift                points and multipliers
-│   │   ├── Edge.swift                        Edge and EdgeMapping
+│   │   ├── SwipeEdge.swift                        SwipeEdge and EdgeMapping
 │   │   ├── RoundPlanner.swift                RoundPlan and planner
 │   │   ├── ItemSequencer.swift               item stream for a round
 │   │   ├── Results.swift                     ItemResult, RoundResult, RunSummary
@@ -750,7 +750,7 @@ git commit -m "feat(engine): run configuration with window schedule and scoring 
 ### Task 4: Edges, edge mapping and round planner
 
 **Files:**
-- Create: `Packages/SwipeSortEngine/Sources/SwipeSortEngine/Edge.swift`
+- Create: `Packages/SwipeSortEngine/Sources/SwipeSortEngine/SwipeEdge.swift`
 - Create: `Packages/SwipeSortEngine/Sources/SwipeSortEngine/RoundPlanner.swift`
 - Create: `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/RoundPlannerTests.swift`
 
@@ -786,11 +786,11 @@ import Testing
     }
 
     @Test func edgeSetsMatchCategoryCount() {
-        #expect(Edge.edges(forCategoryCount: 2) == [.left, .right])
-        #expect(Edge.edges(forCategoryCount: 3) == [.left, .right, .up])
-        #expect(Edge.edges(forCategoryCount: 4) == [.left, .right, .up, .down])
+        #expect(SwipeEdge.edges(forCategoryCount: 2) == [.left, .right])
+        #expect(SwipeEdge.edges(forCategoryCount: 3) == [.left, .right, .up])
+        #expect(SwipeEdge.edges(forCategoryCount: 4) == [.left, .right, .up, .down])
         for plan in plans() {
-            #expect(Set(plan.mapping.categoryByEdge.keys) == Set(Edge.edges(forCategoryCount: plan.activeCategoryIDs.count)))
+            #expect(Set(plan.mapping.categoryByEdge.keys) == Set(SwipeEdge.edges(forCategoryCount: plan.activeCategoryIDs.count)))
         }
     }
 
@@ -836,19 +836,19 @@ import Testing
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `Scripts/engine-test.sh`
-Expected: compile errors for `Edge`, `EdgeMapping`, `RoundPlan`, `RoundPlanner`.
+Expected: compile errors for `SwipeEdge`, `EdgeMapping`, `RoundPlan`, `RoundPlanner`.
 
 - [ ] **Step 3: Implement edges and the planner**
 
-`Packages/SwipeSortEngine/Sources/SwipeSortEngine/Edge.swift`:
+`Packages/SwipeSortEngine/Sources/SwipeSortEngine/SwipeEdge.swift`:
 
 ```swift
 /// A screen edge the player can flick an item toward.
-public enum Edge: String, Codable, Sendable, CaseIterable, Hashable, CodingKeyRepresentable {
+public enum SwipeEdge: String, Codable, Sendable, CaseIterable, Hashable, CodingKeyRepresentable {
     case up, down, left, right
 
     /// Which edges a round uses for a given number of categories.
-    public static func edges(forCategoryCount count: Int) -> [Edge] {
+    public static func edges(forCategoryCount count: Int) -> [SwipeEdge] {
         switch count {
         case ...2: [.left, .right]
         case 3: [.left, .right, .up]
@@ -859,23 +859,23 @@ public enum Edge: String, Codable, Sendable, CaseIterable, Hashable, CodingKeyRe
 
 /// Which category lives at which edge for one round.
 public struct EdgeMapping: Codable, Sendable, Equatable {
-    public var categoryByEdge: [Edge: String]
+    public var categoryByEdge: [SwipeEdge: String]
 
-    public init(categoryByEdge: [Edge: String]) {
+    public init(categoryByEdge: [SwipeEdge: String]) {
         self.categoryByEdge = categoryByEdge
     }
 
-    public func category(at edge: Edge) -> String? {
+    public func category(at edge: SwipeEdge) -> String? {
         categoryByEdge[edge]
     }
 
-    public func edge(for categoryID: String) -> Edge? {
+    public func edge(for categoryID: String) -> SwipeEdge? {
         categoryByEdge.first { $0.value == categoryID }?.key
     }
 
-    /// Edges in use, in `Edge.allCases` order.
-    public var edges: [Edge] {
-        Edge.allCases.filter { categoryByEdge[$0] != nil }
+    /// Edges in use, in `SwipeEdge.allCases` order.
+    public var edges: [SwipeEdge] {
+        SwipeEdge.allCases.filter { categoryByEdge[$0] != nil }
     }
 }
 ```
@@ -909,8 +909,8 @@ public enum RoundPlanner {
             let dimension = pack.dimensions[index % pack.dimensions.count]
             let count = min(configuration.categoryCount(roundIndex: index), dimension.values.count)
             let active = Array(dimension.values.map(\.id).shuffled(using: &rng).prefix(count))
-            let edges = Edge.edges(forCategoryCount: count).shuffled(using: &rng)
-            var categoryByEdge: [Edge: String] = [:]
+            let edges = SwipeEdge.edges(forCategoryCount: count).shuffled(using: &rng)
+            var categoryByEdge: [SwipeEdge: String] = [:]
             for (edge, category) in zip(edges, active) {
                 categoryByEdge[edge] = category
             }
@@ -956,7 +956,7 @@ import Testing
     let pack = ContentPack.shapesAndColours
 
     func makePlan(categories: [String], dimension: String = "colour", itemSeed: UInt64 = 3) -> RoundPlan {
-        let edges = Edge.edges(forCategoryCount: categories.count)
+        let edges = SwipeEdge.edges(forCategoryCount: categories.count)
         return RoundPlan(
             index: 0,
             dimensionID: dimension,
@@ -1243,12 +1243,12 @@ public struct ActiveItem: Sendable, Equatable {
     public var index: Int
     public var item: Item
     public var expectedCategoryID: String
-    public var expectedEdge: Edge
+    public var expectedEdge: SwipeEdge
     public var shownAt: Duration
     public var deadline: Duration
     public var window: Duration
 
-    public init(index: Int, item: Item, expectedCategoryID: String, expectedEdge: Edge, shownAt: Duration, deadline: Duration, window: Duration) {
+    public init(index: Int, item: Item, expectedCategoryID: String, expectedEdge: SwipeEdge, shownAt: Duration, deadline: Duration, window: Duration) {
         self.index = index
         self.item = item
         self.expectedCategoryID = expectedCategoryID
@@ -1280,7 +1280,7 @@ public enum FeedbackCue: Sendable, Equatable {
 public enum RunEvent: Sendable, Equatable {
     case startRun
     case startRound
-    case answer(Edge)
+    case answer(SwipeEdge)
     /// "Time may have passed." Handles timeouts, the inter-item gap and the round clock.
     case tick
     case pause
@@ -1873,7 +1873,7 @@ public struct RunState: Sendable, Equatable {
         return [.itemShown(active), .wake(at: min(active.deadline, roundDeadline(at: now)))]
     }
 
-    private mutating func resolve(_ active: ActiveItem, answeredEdge: Edge?, at now: Duration) -> [RunEffect] {
+    private mutating func resolve(_ active: ActiveItem, answeredEdge: SwipeEdge?, at now: Duration) -> [RunEffect] {
         let plan = currentPlan
         let timedOut = answeredEdge == nil
         let correct = answeredEdge == active.expectedEdge
@@ -3389,6 +3389,7 @@ git commit -m "feat(app): watchOS app scaffold with container target, tests and 
 
 **Files:**
 - Create: `WatchGame/Packs/PackLoader.swift`
+- Create: `WatchGame/Game/Localization.swift`
 - Create: `WatchGameTests/PackLoaderTests.swift`
 - Create: `WatchGameTests/Fixtures/broken.pack.json`
 - Create: `WatchGameTests/Fixtures/valid.pack.json`
@@ -3694,8 +3695,9 @@ import SwipeSortEngine
 
     @Test func dailyStreakCountsConsecutiveDays() throws {
         let store = try makeStore()
-        let calendar = Calendar(identifier: .gregorian)
-        let today = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_790_208_000)) // 2026-09-24
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        let today = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_790_208_000)) // 2026-09-24 UTC
         func play(daysAgo: Int, completed: Bool = true) {
             let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
             let key = DailySeed.dayKey(for: date, calendar: calendar)
@@ -3884,11 +3886,14 @@ final class HistoryStore {
     static let schema = Schema([RunEntry.self, RoundEntry.self, ItemEntry.self])
     private static let logger = Logger(subsystem: "com.pynto.swipesort", category: "history")
 
+    /// Retained on purpose: a ModelContext does not keep its container alive.
+    let container: ModelContainer
     let context: ModelContext
     /// True when the persistent store failed and an in-memory store is being used instead.
     private(set) var isFallback = false
 
     init(container: ModelContainer, isFallback: Bool = false) {
+        self.container = container
         context = container.mainContext
         context.autosaveEnabled = true
         self.isFallback = isFallback
@@ -3918,9 +3923,8 @@ final class HistoryStore {
 
     func append(_ result: RoundResult, to run: RunEntry) {
         let entry = RoundEntry(result: result)
-        entry.run = run
         context.insert(entry)
-        run.rounds = (run.rounds ?? []) + [entry]
+        entry.run = run
         save()
     }
 
@@ -4223,7 +4227,7 @@ final class EngineSound: SoundService {
 
     private func configure(bundle: Bundle) throws {
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+        try session.setCategory(.ambient, mode: .default, options: [])
         try session.setActive(true)
 
         for asset in SoundAsset.allCases {
@@ -4326,7 +4330,7 @@ SOUNDS = {
     "timeout": sweep(600, 180, 220),
     "roundStart": tone(660, 90) + tone(990, 170),
     "perfect": tone(523, 70) + tone(659, 70) + tone(784, 70) + tone(1047, 230, harmonics=(1.0, 0.3)),
-    "runEnd": tone(784, 120) + tone(659, 120) + tone(523, 260, harmonics=(1.0, 0.4)),
+    "runEnd": tone(784, 120) + tone(659, 120) + tone(523, 240, harmonics=(1.0, 0.4)),
 }
 
 # watchOS has no time-pitch unit, so the correct sound is rendered once per semitone.
@@ -4339,7 +4343,7 @@ if __name__ == "__main__":
 ```
 
 Run: `python3 Tools/generate_sounds.py`
-Expected: eighteen `wrote WatchGame/Resources/Sounds/<name>.wav` lines: the thirteen `correct-NN` variants at 110 ms, `wrong` 180 ms, `timeout` 220 ms, `roundStart` 260 ms, `perfect` 440 ms and `runEnd` 500 ms. watchOS has no `AVAudioUnitTimePitch`, which is why the correct sound is rendered once per semitone rather than pitch-shifted at runtime.
+Expected: eighteen `wrote WatchGame/Resources/Sounds/<name>.wav` lines: the thirteen `correct-NN` variants at 110 ms, `wrong` 180 ms, `timeout` 220 ms, `roundStart` 260 ms, `perfect` 440 ms and `runEnd` 480 ms. watchOS has no `AVAudioUnitTimePitch`, which is why the correct sound is rendered once per semitone rather than pitch-shifted at runtime.
 
 - [ ] **Step 6: Run the tests to verify they pass**
 
@@ -4687,7 +4691,7 @@ final class GameSession {
 
     func start() { send(.startRun) }
     func startRound() { send(.startRound) }
-    func answer(_ edge: Edge) { send(.answer(edge)) }
+    func answer(_ edge: SwipeEdge) { send(.answer(edge)) }
 
     func pause() {
         send(.pause)
@@ -4844,7 +4848,7 @@ import SwipeSortEngine
     let bounds = CGSize(width: 198, height: 242)
     let centre = CGPoint(x: 99, y: 121)
 
-    func classify(_ dx: CGFloat, _ dy: CGFloat, predicted: CGSize? = nil, start: CGPoint? = nil) -> Edge? {
+    func classify(_ dx: CGFloat, _ dy: CGFloat, predicted: CGSize? = nil, start: CGPoint? = nil) -> SwipeEdge? {
         classifier.edge(start: start ?? centre, translation: CGSize(width: dx, height: dy),
                         predictedTranslation: predicted ?? CGSize(width: dx, height: dy), bounds: bounds)
     }
@@ -4897,7 +4901,7 @@ struct SwipeClassifier {
     var ambiguityRatio: CGFloat = 0.8
     var edgeExclusion: CGFloat = 14
 
-    func edge(start: CGPoint, translation: CGSize, predictedTranslation: CGSize, bounds: CGSize) -> Edge? {
+    func edge(start: CGPoint, translation: CGSize, predictedTranslation: CGSize, bounds: CGSize) -> SwipeEdge? {
         guard start.x >= edgeExclusion, start.y >= edgeExclusion,
               start.x <= bounds.width - edgeExclusion, start.y <= bounds.height - edgeExclusion
         else { return nil }
@@ -4966,7 +4970,7 @@ struct ItemView: View {
     }
 }
 
-struct TriangleShape: Shape {
+nonisolated struct TriangleShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
         path.move(to: CGPoint(x: rect.midX, y: rect.minY))
@@ -4977,7 +4981,7 @@ struct TriangleShape: Shape {
     }
 }
 
-struct StarShape: Shape {
+nonisolated struct StarShape: Shape {
     var points = 5
 
     func path(in rect: CGRect) -> Path {
@@ -5035,14 +5039,14 @@ import SwipeSortEngine
 /// Category labels pinned to the active edges. When `tapToSort` is on each label is a
 /// 44-point tap target; otherwise labels are decoration and swipes carry the input.
 struct EdgeLabelsView: View {
-    var labels: [Edge: String]
-    var highlighted: Edge?
+    var labels: [SwipeEdge: String]
+    var highlighted: SwipeEdge?
     var tapToSort: Bool
-    var onTap: (Edge) -> Void
+    var onTap: (SwipeEdge) -> Void
 
     var body: some View {
         ZStack {
-            ForEach(Edge.allCases, id: \.self) { edge in
+            ForEach(SwipeEdge.allCases, id: \.self) { edge in
                 if let text = labels[edge] {
                     label(text, edge: edge)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: alignment(for: edge))
@@ -5053,7 +5057,7 @@ struct EdgeLabelsView: View {
     }
 
     @ViewBuilder
-    private func label(_ text: String, edge: Edge) -> some View {
+    private func label(_ text: String, edge: SwipeEdge) -> some View {
         let core = Text(text)
             .font(.system(size: 13, weight: .semibold, design: .rounded))
             .lineLimit(1)
@@ -5072,7 +5076,7 @@ struct EdgeLabelsView: View {
         }
     }
 
-    private func alignment(for edge: Edge) -> Alignment {
+    private func alignment(for edge: SwipeEdge) -> Alignment {
         switch edge {
         case .up: .top
         case .down: .bottom
@@ -5223,7 +5227,7 @@ struct RoundIntroView: View {
     }
 
     private func mappingPreview(_ plan: RoundPlan) -> some View {
-        var labels: [Edge: String] = [:]
+        var labels: [SwipeEdge: String] = [:]
         for (edge, category) in plan.mapping.categoryByEdge {
             labels[edge] = session.categoryLabel(category, in: plan)
         }
@@ -5314,7 +5318,7 @@ struct PlayView: View {
     @AppStorage(AppSettings.colourHints) private var colourHints = false
 
     private let classifier = SwipeClassifier()
-    @State private var highlightedEdge: Edge?
+    @State private var highlightedEdge: SwipeEdge?
     @State private var flashEdge = false
 
     var body: some View {
@@ -5433,8 +5437,8 @@ struct PlayView: View {
 
     // MARK: - Input
 
-    private var labels: [Edge: String] {
-        var result: [Edge: String] = [:]
+    private var labels: [SwipeEdge: String] {
+        var result: [SwipeEdge: String] = [:]
         for (edge, category) in session.currentPlan.mapping.categoryByEdge {
             result[edge] = session.categoryLabel(category, in: session.currentPlan)
         }
@@ -6572,7 +6576,7 @@ On the 41mm and 49mm simulators: launch the app, start a run, and confirm with a
 With the Accessibility Inspector target set to the booted simulator (Xcode menu Open Developer Tool, Accessibility Inspector) or by reading labels with `xcrun simctl` unavailable, verify by code review and the Inspector:
 - Every button on Home, Settings, Paused and Results has a label that reads as an action.
 - The play item announces its category (Task 16 sets `accessibilityLabel`) and exposes one custom action per active edge.
-- Edge labels are hidden from VoiceOver when tap to sort is off and become buttons when it is on.
+- SwipeEdge labels are hidden from VoiceOver when tap to sort is off and become buttons when it is on.
 - `LivesView` announces "n of 3 lives".
 - Reduce Motion: enable it in the simulator (Settings, Accessibility, Motion) and confirm the item crossfades rather than flies, and no confetti appears after a perfect round.
 

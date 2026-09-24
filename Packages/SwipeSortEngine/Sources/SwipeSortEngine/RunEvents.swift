@@ -3,12 +3,12 @@ public struct ActiveItem: Sendable, Equatable {
     public var index: Int
     public var item: Item
     public var expectedCategoryID: String
-    public var expectedEdge: Edge
+    public var expectedEdge: SwipeEdge
     public var shownAt: Duration
     public var deadline: Duration
     public var window: Duration
 
-    public init(index: Int, item: Item, expectedCategoryID: String, expectedEdge: Edge, shownAt: Duration, deadline: Duration, window: Duration) {
+    public init(index: Int, item: Item, expectedCategoryID: String, expectedEdge: SwipeEdge, shownAt: Duration, deadline: Duration, window: Duration) {
         self.index = index
         self.item = item
         self.expectedCategoryID = expectedCategoryID
@@ -40,7 +40,7 @@ public enum FeedbackCue: Sendable, Equatable {
 public enum RunEvent: Sendable, Equatable {
     case startRun
     case startRound
-    case answer(Edge)
+    case answer(SwipeEdge)
     /// "Time may have passed." Handles timeouts, the inter-item gap and the round clock.
     case tick
     case pause

@@ -24,8 +24,8 @@ public enum RoundPlanner {
             let dimension = pack.dimensions[index % pack.dimensions.count]
             let count = min(configuration.categoryCount(roundIndex: index), dimension.values.count)
             let active = Array(dimension.values.map(\.id).shuffled(using: &rng).prefix(count))
-            let edges = Edge.edges(forCategoryCount: count).shuffled(using: &rng)
-            var categoryByEdge: [Edge: String] = [:]
+            let edges = SwipeEdge.edges(forCategoryCount: count).shuffled(using: &rng)
+            var categoryByEdge: [SwipeEdge: String] = [:]
             for (edge, category) in zip(edges, active) {
                 categoryByEdge[edge] = category
             }

@@ -9,11 +9,14 @@ final class HistoryStore {
     static let schema = Schema([RunEntry.self, RoundEntry.self, ItemEntry.self])
     private static let logger = Logger(subsystem: "com.pynto.swipesort", category: "history")
 
+    /// Retained on purpose: a ModelContext does not keep its container alive.
+    let container: ModelContainer
     let context: ModelContext
     /// True when the persistent store failed and an in-memory store is being used instead.
     private(set) var isFallback = false
 
     init(container: ModelContainer, isFallback: Bool = false) {
+        self.container = container
         context = container.mainContext
         context.autosaveEnabled = true
         self.isFallback = isFallback
@@ -43,9 +46,8 @@ final class HistoryStore {
 
     func append(_ result: RoundResult, to run: RunEntry) {
         let entry = RoundEntry(result: result)
-        entry.run = run
         context.insert(entry)
-        run.rounds = (run.rounds ?? []) + [entry]
+        entry.run = run
         save()
     }
 

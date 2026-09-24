@@ -25,11 +25,11 @@ import Testing
     }
 
     @Test func edgeSetsMatchCategoryCount() {
-        #expect(Edge.edges(forCategoryCount: 2) == [.left, .right])
-        #expect(Edge.edges(forCategoryCount: 3) == [.left, .right, .up])
-        #expect(Edge.edges(forCategoryCount: 4) == [.left, .right, .up, .down])
+        #expect(SwipeEdge.edges(forCategoryCount: 2) == [.left, .right])
+        #expect(SwipeEdge.edges(forCategoryCount: 3) == [.left, .right, .up])
+        #expect(SwipeEdge.edges(forCategoryCount: 4) == [.left, .right, .up, .down])
         for plan in plans() {
-            #expect(Set(plan.mapping.categoryByEdge.keys) == Set(Edge.edges(forCategoryCount: plan.activeCategoryIDs.count)))
+            #expect(Set(plan.mapping.categoryByEdge.keys) == Set(SwipeEdge.edges(forCategoryCount: plan.activeCategoryIDs.count)))
         }
     }
 

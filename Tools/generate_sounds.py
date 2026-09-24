@@ -58,7 +58,7 @@ SOUNDS = {
     "timeout": sweep(600, 180, 220),
     "roundStart": tone(660, 90) + tone(990, 170),
     "perfect": tone(523, 70) + tone(659, 70) + tone(784, 70) + tone(1047, 230, harmonics=(1.0, 0.3)),
-    "runEnd": tone(784, 120) + tone(659, 120) + tone(523, 260, harmonics=(1.0, 0.4)),
+    "runEnd": tone(784, 120) + tone(659, 120) + tone(523, 240, harmonics=(1.0, 0.4)),
 }
 
 # watchOS has no time-pitch unit, so the correct sound is rendered once per semitone.

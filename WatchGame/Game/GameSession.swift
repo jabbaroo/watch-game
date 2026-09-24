@@ -100,7 +100,7 @@ final class GameSession {
 
     func start() { send(.startRun) }
     func startRound() { send(.startRound) }
-    func answer(_ edge: Edge) { send(.answer(edge)) }
+    func answer(_ edge: SwipeEdge) { send(.answer(edge)) }
 
     func pause() {
         send(.pause)

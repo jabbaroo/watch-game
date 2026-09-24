@@ -5,7 +5,7 @@ import Testing
     let pack = ContentPack.shapesAndColours
 
     func makePlan(categories: [String], dimension: String = "colour", itemSeed: UInt64 = 3) -> RoundPlan {
-        let edges = Edge.edges(forCategoryCount: categories.count)
+        let edges = SwipeEdge.edges(forCategoryCount: categories.count)
         return RoundPlan(
             index: 0,
             dimensionID: dimension,
