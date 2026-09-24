@@ -6580,7 +6580,9 @@ git commit -m "chore: layout and accessibility pass across watch sizes"
 
 - [ ] **Step 1: Generate a placeholder icon**
 
-`Tools/generate_icon.py` writes an SVG of four Okabe-Ito shapes on a dark background and rasterises it with Quick Look:
+The script writes an SVG of four Okabe-Ito shapes on a dark background and rasterises it with Quick Look.
+
+`Tools/generate_icon.py`:
 
 ```python
 #!/usr/bin/env python3
@@ -6923,7 +6925,22 @@ struct WatchGameWidget: Widget {
 </plist>
 ```
 
-`WatchGameWidget/WatchGameWidgetExtension.entitlements` and `WatchGame/WatchGame.entitlements` (identical content):
+`WatchGameWidget/WatchGameWidgetExtension.entitlements`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.pynto.swipesort</string>
+	</array>
+</dict>
+</plist>
+```
+
+`WatchGame/WatchGame.entitlements` (identical content):
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
