@@ -49,7 +49,18 @@ final class AppEnvironment {
         )
     }
 
+    /// The built-in pack, always first in `packs`. The daily challenge uses it.
     var pack: ContentPack { packs[0] }
+
+    func pack(id: String) -> ContentPack? {
+        packs.first { $0.id == id }
+    }
+
+    /// The pack free play uses: the stored choice when it is installed, otherwise the built-in pack.
+    var selectedPack: ContentPack {
+        let stored = UserDefaults.standard.string(forKey: AppSettings.packID)
+        return stored.flatMap(pack(id:)) ?? pack
+    }
 
     func applySettings(from defaults: UserDefaults = .standard) {
         haptics.isEnabled = defaults.bool(forKey: AppSettings.hapticsEnabled)
@@ -57,8 +68,16 @@ final class AppEnvironment {
     }
 
     /// Creates and stores a new session. A random seed for a normal run, the day's seed for the daily.
+    /// Free play uses `packID` when given, else the selected pack; the daily always uses the built-in pack.
     @discardableResult
-    func startRun(daily: Bool, now: Date = .now) -> GameSession {
+    func startRun(daily: Bool, packID: String? = nil, now: Date = .now) -> GameSession {
+        var pack = daily ? self.pack : (packID.flatMap(self.pack(id:)) ?? selectedPack)
+        #if DEBUG
+        // UI tests pass "-debugPack <id>" to force a pack.
+        if let debugID = UserDefaults.standard.string(forKey: "debugPack"), let debugPack = self.pack(id: debugID) {
+            pack = debugPack
+        }
+        #endif
         let dayKey = daily ? DailySeed.dayKey(for: now) : nil
         let seed = daily ? DailySeed.seed(forDayKey: dayKey!) : UInt64.random(in: .min ... .max)
         let session = GameSession(pack: pack, seed: seed, isDaily: daily, dailyKey: dayKey,

@@ -100,6 +100,8 @@ struct HistoryView: View {
                     if run.isDaily {
                         Image(systemName: "calendar").font(.system(size: 9))
                     }
+                    Text(Localization.string((environment.pack(id: run.packID) ?? environment.pack).nameKey))
+                    Text(verbatim: "·")
                     Group {
                         if run.completed {
                             Text("\(run.roundsCompleted) rounds")

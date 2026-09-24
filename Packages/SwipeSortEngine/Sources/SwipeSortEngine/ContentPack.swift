@@ -4,12 +4,15 @@ import Foundation
 public struct ContentPack: Codable, Sendable, Equatable, Identifiable {
     public var id: String
     public var nameKey: String
+    /// Optional String Catalog key for a one-line description shown in the mode picker.
+    public var descriptionKey: String?
     public var dimensions: [Dimension]
     public var items: [Item]
 
-    public init(id: String, nameKey: String, dimensions: [Dimension], items: [Item]) {
+    public init(id: String, nameKey: String, descriptionKey: String? = nil, dimensions: [Dimension], items: [Item]) {
         self.id = id
         self.nameKey = nameKey
+        self.descriptionKey = descriptionKey
         self.dimensions = dimensions
         self.items = items
     }
@@ -124,15 +127,16 @@ public enum ShapeKind: String, Codable, Sendable, CaseIterable {
 }
 
 /// How an item is drawn. Encoded as an object with a `type` discriminator.
-/// Version 1 supports code-drawn shapes and asset catalog images only.
 public enum Visual: Sendable, Equatable {
     case shape(kind: ShapeKind, colour: String)
     case image(assetName: String)
+    /// A localised word drawn in a colour, for Stroop packs. `textKey` is a String Catalog key.
+    case word(textKey: String, colour: String)
 }
 
 extension Visual: Codable {
     private enum CodingKeys: String, CodingKey {
-        case type, kind, colour, assetName
+        case type, kind, colour, assetName, textKey
     }
 
     public init(from decoder: any Decoder) throws {
@@ -146,6 +150,11 @@ extension Visual: Codable {
             )
         case "image":
             self = .image(assetName: try container.decode(String.self, forKey: .assetName))
+        case "word":
+            self = .word(
+                textKey: try container.decode(String.self, forKey: .textKey),
+                colour: try container.decode(String.self, forKey: .colour)
+            )
         default:
             throw DecodingError.dataCorruptedError(
                 forKey: .type, in: container, debugDescription: "Unknown visual type '\(type)'"
@@ -163,6 +172,10 @@ extension Visual: Codable {
         case let .image(assetName):
             try container.encode("image", forKey: .type)
             try container.encode(assetName, forKey: .assetName)
+        case let .word(textKey, colour):
+            try container.encode("word", forKey: .type)
+            try container.encode(textKey, forKey: .textKey)
+            try container.encode(colour, forKey: .colour)
         }
     }
 }

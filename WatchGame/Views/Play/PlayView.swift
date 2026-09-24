@@ -146,6 +146,7 @@ struct PlayView: View {
 
     private func hint(for item: Item) -> String? {
         guard colourHints else { return nil }
+        if case .word = item.visual { return nil }
         for dimension in session.pack.dimensions {
             if let valueID = item.attributes[dimension.id],
                let hintKey = dimension.value(id: valueID)?.hintKey {

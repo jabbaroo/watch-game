@@ -43,12 +43,23 @@ import Testing
             .shape(kind: .star, colour: "#0072B2"),
             .shape(kind: .triangle, colour: "#D55E00"),
             .image(assetName: "carrot"),
+            .word(textKey: "colour.red", colour: "#D55E00"),
         ]
         for visual in visuals {
             let data = try JSONEncoder().encode(visual)
             let decoded = try JSONDecoder().decode(Visual.self, from: data)
             #expect(decoded == visual)
         }
+    }
+
+    @Test func wordVisualAndDescriptionDecodeFromJSON() throws {
+        let json = ##"{"type":"word","textKey":"colour.red","colour":"#D55E00"}"##
+        #expect(try JSONDecoder().decode(Visual.self, from: Data(json.utf8)) == .word(textKey: "colour.red", colour: "#D55E00"))
+        let withoutDescription = try JSONDecoder().decode(ContentPack.self, from: Data(Self.miniJSON.utf8))
+        #expect(withoutDescription.descriptionKey == nil)
+        let withDescription = Self.miniJSON.replacingOccurrences(of: "\"nameKey\": \"pack.mini\",", with: "\"nameKey\": \"pack.mini\", \"descriptionKey\": \"pack.mini.description\",")
+        #expect(try JSONDecoder().decode(ContentPack.self, from: Data(withDescription.utf8)).descriptionKey == "pack.mini.description")
+        #expect(ContentPack.shapesAndColours.descriptionKey == "pack.shapes-colours.description")
     }
 
     @Test func unknownVisualTypeFailsToDecode() {

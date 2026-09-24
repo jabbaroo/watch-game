@@ -327,3 +327,36 @@ Swift 6 language mode with strict concurrency. The engine is `Sendable` value ty
 - All engine tests pass with `swift test`; app tests pass on the watchOS 27 simulator.
 - The simulator layout pass and the manual hardware checklist pass.
 - A build has been uploaded to TestFlight.
+
+## 13. Roadmap: more cognitive modes
+
+Principle: every mode is a variant of the one flick loop the hand already knows. New modes arrive as packs and rule variants first, and only later as a second input loop. Each mode reports one headline metric, and the History screen grows a small profile (speed, switching, inhibition, memory, attention) built from those metrics. Wording everywhere stays "mental agility" and "see how you switch, focus and remember"; the app never claims to train or improve cognition, and all data stays on the watch.
+
+### 13.1 Stroop (first)
+
+- Pack `stroop`, shipped as JSON, with two dimensions that share value ids: `ink` (red, yellow, green, blue) and `word` (the same four ids). Items are the 16 word-in-ink combinations; a quarter are congruent (the word in its own colour), the rest incongruent.
+- A new visual, `word(textKey:colour:)`, draws a localised word in a colour. The colour-hints setting does not apply to words.
+- Rounds rotate ink, word, ink, word: sorting by ink is the classic Stroop task, sorting by the word's meaning is the reverse Stroop. Category labels reuse the colour names.
+- Headline metric, interference cost: mean correct reaction time on incongruent items minus congruent ones, over the whole run, shown on Results as "Interference" when there are at least 3 of each. The engine defines congruence generically as "every dimension carries the same value id", so the metric is nil for packs where ids never match.
+- Home gains a mode: Play starts the last-used pack and shows its name; a "Mode" row picks between packs when more than one is installed. The daily challenge keeps using the shapes pack.
+- Results and History show the pack name.
+
+### 13.2 Go, no-go (second)
+
+Most items are sorted; items carrying a "hold" mark (a small dot) must be left alone until their window closes, and leaving them counts as a correct answer. Flicking a hold item is a false alarm and costs a life. Metrics: false-alarm rate and mean reaction time on go items. Needs one rule flag per round ("hold items with a dot"), a `hold` attribute on items, and an engine outcome for a correct non-response.
+
+### 13.3 Two-back (third)
+
+Sort the item that appeared two items ago rather than the one on screen; one-back is the on-ramp in rounds 1 and 2. Metric: accuracy at each depth, reported as span. Needs the engine to keep a short history of shown items and judge answers against it.
+
+### 13.4 Rule variants that need no new rendering
+
+Conditional rules ("sort by colour unless it is a star, then by shape"), mirror rounds (flick away from the matching edge), fading edge labels (spatial memory), and flanker items (a centre item surrounded by distractors, selective attention).
+
+### 13.5 More packs
+
+Number packs (odd or even, above or below fifty), word packs (vowel or consonant first letter, real word or nonsense), and the image packs already planned (animals by habitat, fruit versus vegetables), each with two or three dimensions so the switch mechanic survives.
+
+### 13.6 A second loop, later
+
+Sequence recall (edges flash, repeat with flicks), which side has more (two dot clouds, flick toward the larger), crown estimation (turn the crown to match a length or count), and rhythm taps.

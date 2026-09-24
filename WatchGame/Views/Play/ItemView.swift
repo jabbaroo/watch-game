@@ -19,6 +19,13 @@ struct ItemView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: size, height: size)
+            case let .word(textKey, colour):
+                Text(Localization.string(textKey).uppercased())
+                    .font(.system(size: size * 0.34, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color(hex: colour))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .frame(width: size * 1.6, height: size)
             }
             if let hint {
                 Text(hint)
@@ -93,5 +100,6 @@ extension Color {
     HStack {
         ItemView(visual: .shape(kind: .star, colour: "#F0E442"), hint: "Y", size: 60)
         ItemView(visual: .shape(kind: .triangle, colour: "#0072B2"), hint: nil, size: 60)
+        ItemView(visual: .word(textKey: "colour.red", colour: "#0072B2"), hint: nil, size: 60)
     }
 }

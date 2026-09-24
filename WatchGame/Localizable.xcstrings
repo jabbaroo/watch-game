@@ -1,21 +1,206 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "colour.blue" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Blue" } } } },
-    "colour.green" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Green" } } } },
-    "colour.red" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Red" } } } },
-    "colour.yellow" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Yellow" } } } },
-    "dimension.colour" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Colour" } } } },
-    "dimension.shape" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Shape" } } } },
-    "hint.colour.blue" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "B" } } } },
-    "hint.colour.green" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "G" } } } },
-    "hint.colour.red" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "R" } } } },
-    "hint.colour.yellow" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Y" } } } },
-    "pack.shapes-colours" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Shapes & Colours" } } } },
-    "shape.circle" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Circle" } } } },
-    "shape.square" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Square" } } } },
-    "shape.star" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Star" } } } },
-    "shape.triangle" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Triangle" } } } }
+  "sourceLanguage": "en",
+  "strings": {
+    "colour.blue": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blue"
+          }
+        }
+      }
+    },
+    "colour.green": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Green"
+          }
+        }
+      }
+    },
+    "colour.red": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Red"
+          }
+        }
+      }
+    },
+    "colour.yellow": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yellow"
+          }
+        }
+      }
+    },
+    "dimension.colour": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colour"
+          }
+        }
+      }
+    },
+    "dimension.ink": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ink colour"
+          }
+        }
+      }
+    },
+    "dimension.shape": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shape"
+          }
+        }
+      }
+    },
+    "dimension.word": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Word"
+          }
+        }
+      }
+    },
+    "hint.colour.blue": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "B"
+          }
+        }
+      }
+    },
+    "hint.colour.green": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "G"
+          }
+        }
+      }
+    },
+    "hint.colour.red": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R"
+          }
+        }
+      }
+    },
+    "hint.colour.yellow": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Y"
+          }
+        }
+      }
+    },
+    "pack.shapes-colours": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shapes & Colours"
+          }
+        }
+      }
+    },
+    "pack.shapes-colours.description": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sort shapes by colour, then by shape"
+          }
+        }
+      }
+    },
+    "pack.stroop": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stroop"
+          }
+        }
+      }
+    },
+    "pack.stroop.description": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sort by the ink, not the word"
+          }
+        }
+      }
+    },
+    "shape.circle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Circle"
+          }
+        }
+      }
+    },
+    "shape.square": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Square"
+          }
+        }
+      }
+    },
+    "shape.star": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Star"
+          }
+        }
+      }
+    },
+    "shape.triangle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Triangle"
+          }
+        }
+      }
+    }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }

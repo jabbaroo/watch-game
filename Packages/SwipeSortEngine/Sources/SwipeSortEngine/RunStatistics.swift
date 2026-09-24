@@ -39,12 +39,16 @@ public struct RunStatistics: Sendable, Equatable {
     /// Mean over qualifying rounds of (mean of first `leadingItemCount` correct reactions
     /// minus mean of the remaining correct reactions). Nil when no round qualifies.
     public var switchCost: Duration?
+    /// Stroop interference: mean correct reaction time on incongruent items minus congruent ones.
+    /// An item is congruent when every dimension carries the same value id (a word in its own
+    /// colour). Nil unless there are at least `minimumConflictItems` correct items of each kind.
+    public var conflictCost: Duration?
 
     public var accuracy: Double? {
         resolvedCount > 0 ? Double(correctCount) / Double(resolvedCount) : nil
     }
 
-    public static func compute(rounds: [RoundResult], leadingItemCount: Int = 3, minimumCorrectItems: Int = 6) -> RunStatistics {
+    public static func compute(rounds: [RoundResult], leadingItemCount: Int = 3, minimumCorrectItems: Int = 6, minimumConflictItems: Int = 3) -> RunStatistics {
         let items = rounds.flatMap(\.items)
         let correct = items.filter(\.correct)
         let wrong = items.filter { !$0.correct && !$0.timedOut }
@@ -86,6 +90,14 @@ public struct RunStatistics: Sendable, Equatable {
             return leading - rest
         }
 
+        let congruent = correct.filter(\.isCongruent).compactMap(\.reaction)
+        let incongruent = correct.filter { !$0.isCongruent }.compactMap(\.reaction)
+        var conflictCost: Duration?
+        if congruent.count >= minimumConflictItems, incongruent.count >= minimumConflictItems,
+           let congruentMean = mean(congruent), let incongruentMean = mean(incongruent) {
+            conflictCost = incongruentMean - congruentMean
+        }
+
         return RunStatistics(
             resolvedCount: items.count,
             correctCount: correct.count,
@@ -94,12 +106,20 @@ public struct RunStatistics: Sendable, Equatable {
             errorsByDimension: dimensionOrder.compactMap { errorsByDimension[$0] },
             confusionPairs: confusionPairs,
             meanReaction: mean(correct.compactMap(\.reaction)),
-            switchCost: mean(switchCosts)
+            switchCost: mean(switchCosts),
+            conflictCost: conflictCost
         )
     }
 
     static func mean(_ durations: [Duration]) -> Duration? {
         guard !durations.isEmpty else { return nil }
         return durations.reduce(.zero, +) / durations.count
+    }
+}
+
+public extension ItemResult {
+    /// True when every dimension carries the same value id, for example the word "red" in red ink.
+    var isCongruent: Bool {
+        attributes.count >= 2 && Set(attributes.values).count == 1
     }
 }

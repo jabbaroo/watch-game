@@ -25,18 +25,37 @@ private final class TestBundleMarker {}
         }
     }
 
-    @Test func builtInPackKeysAreLocalised() {
-        let pack = ContentPack.shapesAndColours
-        var keys = [pack.nameKey]
-        for dimension in pack.dimensions {
-            keys.append(dimension.nameKey)
-            for value in dimension.values {
-                keys.append(value.labelKey)
-                if let hintKey = value.hintKey { keys.append(hintKey) }
+    @Test func everyBundledPackKeyIsLocalised() throws {
+        for pack in try PackLoader.validateBundledPacks(in: .main) {
+            var keys = [pack.nameKey]
+            if let descriptionKey = pack.descriptionKey { keys.append(descriptionKey) }
+            for dimension in pack.dimensions {
+                keys.append(dimension.nameKey)
+                for value in dimension.values {
+                    keys.append(value.labelKey)
+                    if let hintKey = value.hintKey { keys.append(hintKey) }
+                }
+            }
+            for item in pack.items {
+                if case .word(let textKey, _) = item.visual { keys.append(textKey) }
+            }
+            for key in keys {
+                #expect(Localization.hasString(key), "missing String Catalog entry for \(key) in pack \(pack.id)")
             }
         }
-        for key in keys {
-            #expect(Localization.hasString(key), "missing String Catalog entry for \(key)")
+    }
+
+    @Test func stroopPackSharesValueIDsAcrossDimensions() throws {
+        let stroop = try #require(PackLoader.loadPacks(from: .main).first { $0.id == "stroop" })
+        #expect(stroop.items.count == 16)
+        #expect(stroop.dimensions.map(\.id) == ["ink", "word"])
+        let inkIDs = Set(stroop.dimensions[0].values.map(\.id))
+        let wordIDs = Set(stroop.dimensions[1].values.map(\.id))
+        #expect(inkIDs == wordIDs, "shared ids let the engine detect congruent items")
+        let congruent = stroop.items.filter { Set($0.attributes.values).count == 1 }
+        #expect(congruent.count == 4)
+        for item in stroop.items {
+            guard case .word = item.visual else { Issue.record("Stroop items must be words"); return }
         }
     }
 

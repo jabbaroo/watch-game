@@ -261,12 +261,23 @@ import Testing
             .shape(kind: .star, colour: "#0072B2"),
             .shape(kind: .triangle, colour: "#D55E00"),
             .image(assetName: "carrot"),
+            .word(textKey: "colour.red", colour: "#D55E00"),
         ]
         for visual in visuals {
             let data = try JSONEncoder().encode(visual)
             let decoded = try JSONDecoder().decode(Visual.self, from: data)
             #expect(decoded == visual)
         }
+    }
+
+    @Test func wordVisualAndDescriptionDecodeFromJSON() throws {
+        let json = ##"{"type":"word","textKey":"colour.red","colour":"#D55E00"}"##
+        #expect(try JSONDecoder().decode(Visual.self, from: Data(json.utf8)) == .word(textKey: "colour.red", colour: "#D55E00"))
+        let withoutDescription = try JSONDecoder().decode(ContentPack.self, from: Data(Self.miniJSON.utf8))
+        #expect(withoutDescription.descriptionKey == nil)
+        let withDescription = Self.miniJSON.replacingOccurrences(of: "\"nameKey\": \"pack.mini\",", with: "\"nameKey\": \"pack.mini\", \"descriptionKey\": \"pack.mini.description\",")
+        #expect(try JSONDecoder().decode(ContentPack.self, from: Data(withDescription.utf8)).descriptionKey == "pack.mini.description")
+        #expect(ContentPack.shapesAndColours.descriptionKey == "pack.shapes-colours.description")
     }
 
     @Test func unknownVisualTypeFailsToDecode() {
@@ -335,12 +346,15 @@ import Foundation
 public struct ContentPack: Codable, Sendable, Equatable, Identifiable {
     public var id: String
     public var nameKey: String
+    /// Optional String Catalog key for a one-line description shown in the mode picker.
+    public var descriptionKey: String?
     public var dimensions: [Dimension]
     public var items: [Item]
 
-    public init(id: String, nameKey: String, dimensions: [Dimension], items: [Item]) {
+    public init(id: String, nameKey: String, descriptionKey: String? = nil, dimensions: [Dimension], items: [Item]) {
         self.id = id
         self.nameKey = nameKey
+        self.descriptionKey = descriptionKey
         self.dimensions = dimensions
         self.items = items
     }
@@ -455,15 +469,16 @@ public enum ShapeKind: String, Codable, Sendable, CaseIterable {
 }
 
 /// How an item is drawn. Encoded as an object with a `type` discriminator.
-/// Version 1 supports code-drawn shapes and asset catalog images only.
 public enum Visual: Sendable, Equatable {
     case shape(kind: ShapeKind, colour: String)
     case image(assetName: String)
+    /// A localised word drawn in a colour, for Stroop packs. `textKey` is a String Catalog key.
+    case word(textKey: String, colour: String)
 }
 
 extension Visual: Codable {
     private enum CodingKeys: String, CodingKey {
-        case type, kind, colour, assetName
+        case type, kind, colour, assetName, textKey
     }
 
     public init(from decoder: any Decoder) throws {
@@ -477,6 +492,11 @@ extension Visual: Codable {
             )
         case "image":
             self = .image(assetName: try container.decode(String.self, forKey: .assetName))
+        case "word":
+            self = .word(
+                textKey: try container.decode(String.self, forKey: .textKey),
+                colour: try container.decode(String.self, forKey: .colour)
+            )
         default:
             throw DecodingError.dataCorruptedError(
                 forKey: .type, in: container, debugDescription: "Unknown visual type '\(type)'"
@@ -494,6 +514,10 @@ extension Visual: Codable {
         case let .image(assetName):
             try container.encode("image", forKey: .type)
             try container.encode(assetName, forKey: .assetName)
+        case let .word(textKey, colour):
+            try container.encode("word", forKey: .type)
+            try container.encode(textKey, forKey: .textKey)
+            try container.encode(colour, forKey: .colour)
         }
     }
 }
@@ -538,7 +562,7 @@ public extension ContentPack {
                 ))
             }
         }
-        return ContentPack(id: "shapes-colours", nameKey: "pack.shapes-colours", dimensions: [colourDimension, shapeDimension], items: items)
+        return ContentPack(id: "shapes-colours", nameKey: "pack.shapes-colours", descriptionKey: "pack.shapes-colours.description", dimensions: [colourDimension, shapeDimension], items: items)
     }()
 }
 ```
@@ -2284,6 +2308,34 @@ import Testing
         #expect(stats.switchCost == .milliseconds(400))
     }
 
+    @Test func conflictCostComparesIncongruentWithCongruent() {
+        func stroop(_ index: Int, ink: String, word: String, ms: Int) -> ItemResult {
+            ItemResult(roundIndex: 0, itemIndex: index, dimensionID: "ink", attributes: ["ink": ink, "word": word],
+                       expectedCategoryID: ink, answeredCategoryID: ink, correct: true, timedOut: false,
+                       reaction: .milliseconds(ms), window: .seconds(2), points: 100)
+        }
+        let items = [
+            stroop(0, ink: "red", word: "red", ms: 500), stroop(1, ink: "blue", word: "blue", ms: 500), stroop(2, ink: "green", word: "green", ms: 500),
+            stroop(3, ink: "red", word: "blue", ms: 800), stroop(4, ink: "blue", word: "red", ms: 800), stroop(5, ink: "green", word: "red", ms: 800),
+        ]
+        #expect(items[0].isCongruent)
+        #expect(!items[3].isCongruent)
+        let stats = RunStatistics.compute(rounds: [round(0, dimension: "ink", items: items)])
+        #expect(stats.conflictCost == .milliseconds(300))
+        let tooFew = RunStatistics.compute(rounds: [round(0, dimension: "ink", items: Array(items[1...]))])
+        #expect(tooFew.conflictCost == nil)
+    }
+
+    @Test func singleDimensionItemsAreNeverCongruent() {
+        let shapes = (0..<6).map { index in
+            ItemResult(roundIndex: 0, itemIndex: index, dimensionID: "colour", attributes: ["colour": "red", "shape": "star"],
+                       expectedCategoryID: "red", answeredCategoryID: "red", correct: true, timedOut: false,
+                       reaction: .milliseconds(500), window: .seconds(2), points: 100)
+        }
+        #expect(!shapes[0].isCongruent)
+        #expect(RunStatistics.compute(rounds: [round(0, items: shapes)]).conflictCost == nil)
+    }
+
     @Test func switchCostAveragesAcrossQualifyingRounds() {
         let roundA = round(0, items: [800, 800, 800, 400, 400, 400].enumerated().map { item($0.offset, reaction: .milliseconds($0.element)) })
         let roundB = round(1, items: [600, 600, 600, 400, 400, 400].enumerated().map { item($0.offset, reaction: .milliseconds($0.element)) })
@@ -2387,12 +2439,16 @@ public struct RunStatistics: Sendable, Equatable {
     /// Mean over qualifying rounds of (mean of first `leadingItemCount` correct reactions
     /// minus mean of the remaining correct reactions). Nil when no round qualifies.
     public var switchCost: Duration?
+    /// Stroop interference: mean correct reaction time on incongruent items minus congruent ones.
+    /// An item is congruent when every dimension carries the same value id (a word in its own
+    /// colour). Nil unless there are at least `minimumConflictItems` correct items of each kind.
+    public var conflictCost: Duration?
 
     public var accuracy: Double? {
         resolvedCount > 0 ? Double(correctCount) / Double(resolvedCount) : nil
     }
 
-    public static func compute(rounds: [RoundResult], leadingItemCount: Int = 3, minimumCorrectItems: Int = 6) -> RunStatistics {
+    public static func compute(rounds: [RoundResult], leadingItemCount: Int = 3, minimumCorrectItems: Int = 6, minimumConflictItems: Int = 3) -> RunStatistics {
         let items = rounds.flatMap(\.items)
         let correct = items.filter(\.correct)
         let wrong = items.filter { !$0.correct && !$0.timedOut }
@@ -2434,6 +2490,14 @@ public struct RunStatistics: Sendable, Equatable {
             return leading - rest
         }
 
+        let congruent = correct.filter(\.isCongruent).compactMap(\.reaction)
+        let incongruent = correct.filter { !$0.isCongruent }.compactMap(\.reaction)
+        var conflictCost: Duration?
+        if congruent.count >= minimumConflictItems, incongruent.count >= minimumConflictItems,
+           let congruentMean = mean(congruent), let incongruentMean = mean(incongruent) {
+            conflictCost = incongruentMean - congruentMean
+        }
+
         return RunStatistics(
             resolvedCount: items.count,
             correctCount: correct.count,
@@ -2442,13 +2506,21 @@ public struct RunStatistics: Sendable, Equatable {
             errorsByDimension: dimensionOrder.compactMap { errorsByDimension[$0] },
             confusionPairs: confusionPairs,
             meanReaction: mean(correct.compactMap(\.reaction)),
-            switchCost: mean(switchCosts)
+            switchCost: mean(switchCosts),
+            conflictCost: conflictCost
         )
     }
 
     static func mean(_ durations: [Duration]) -> Duration? {
         guard !durations.isEmpty else { return nil }
         return durations.reduce(.zero, +) / durations.count
+    }
+}
+
+public extension ItemResult {
+    /// True when every dimension carries the same value id, for example the word "red" in red ink.
+    var isCongruent: Bool {
+        attributes.count >= 2 && Set(attributes.values).count == 1
     }
 }
 ```
@@ -3504,18 +3576,37 @@ private final class TestBundleMarker {}
         }
     }
 
-    @Test func builtInPackKeysAreLocalised() {
-        let pack = ContentPack.shapesAndColours
-        var keys = [pack.nameKey]
-        for dimension in pack.dimensions {
-            keys.append(dimension.nameKey)
-            for value in dimension.values {
-                keys.append(value.labelKey)
-                if let hintKey = value.hintKey { keys.append(hintKey) }
+    @Test func everyBundledPackKeyIsLocalised() throws {
+        for pack in try PackLoader.validateBundledPacks(in: .main) {
+            var keys = [pack.nameKey]
+            if let descriptionKey = pack.descriptionKey { keys.append(descriptionKey) }
+            for dimension in pack.dimensions {
+                keys.append(dimension.nameKey)
+                for value in dimension.values {
+                    keys.append(value.labelKey)
+                    if let hintKey = value.hintKey { keys.append(hintKey) }
+                }
+            }
+            for item in pack.items {
+                if case .word(let textKey, _) = item.visual { keys.append(textKey) }
+            }
+            for key in keys {
+                #expect(Localization.hasString(key), "missing String Catalog entry for \(key) in pack \(pack.id)")
             }
         }
-        for key in keys {
-            #expect(Localization.hasString(key), "missing String Catalog entry for \(key)")
+    }
+
+    @Test func stroopPackSharesValueIDsAcrossDimensions() throws {
+        let stroop = try #require(PackLoader.loadPacks(from: .main).first { $0.id == "stroop" })
+        #expect(stroop.items.count == 16)
+        #expect(stroop.dimensions.map(\.id) == ["ink", "word"])
+        let inkIDs = Set(stroop.dimensions[0].values.map(\.id))
+        let wordIDs = Set(stroop.dimensions[1].values.map(\.id))
+        #expect(inkIDs == wordIDs, "shared ids let the engine detect congruent items")
+        let congruent = stroop.items.filter { Set($0.attributes.values).count == 1 }
+        #expect(congruent.count == 4)
+        for item in stroop.items {
+            guard case .word = item.visual else { Issue.record("Stroop items must be words"); return }
         }
     }
 
@@ -3620,25 +3711,210 @@ Replace `WatchGame/Localizable.xcstrings` with:
 
 ```json
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "colour.blue" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Blue" } } } },
-    "colour.green" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Green" } } } },
-    "colour.red" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Red" } } } },
-    "colour.yellow" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Yellow" } } } },
-    "dimension.colour" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Colour" } } } },
-    "dimension.shape" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Shape" } } } },
-    "hint.colour.blue" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "B" } } } },
-    "hint.colour.green" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "G" } } } },
-    "hint.colour.red" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "R" } } } },
-    "hint.colour.yellow" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Y" } } } },
-    "pack.shapes-colours" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Shapes & Colours" } } } },
-    "shape.circle" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Circle" } } } },
-    "shape.square" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Square" } } } },
-    "shape.star" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Star" } } } },
-    "shape.triangle" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Triangle" } } } }
+  "sourceLanguage": "en",
+  "strings": {
+    "colour.blue": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blue"
+          }
+        }
+      }
+    },
+    "colour.green": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Green"
+          }
+        }
+      }
+    },
+    "colour.red": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Red"
+          }
+        }
+      }
+    },
+    "colour.yellow": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yellow"
+          }
+        }
+      }
+    },
+    "dimension.colour": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colour"
+          }
+        }
+      }
+    },
+    "dimension.ink": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ink colour"
+          }
+        }
+      }
+    },
+    "dimension.shape": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shape"
+          }
+        }
+      }
+    },
+    "dimension.word": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Word"
+          }
+        }
+      }
+    },
+    "hint.colour.blue": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "B"
+          }
+        }
+      }
+    },
+    "hint.colour.green": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "G"
+          }
+        }
+      }
+    },
+    "hint.colour.red": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R"
+          }
+        }
+      }
+    },
+    "hint.colour.yellow": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Y"
+          }
+        }
+      }
+    },
+    "pack.shapes-colours": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shapes & Colours"
+          }
+        }
+      }
+    },
+    "pack.shapes-colours.description": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sort shapes by colour, then by shape"
+          }
+        }
+      }
+    },
+    "pack.stroop": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stroop"
+          }
+        }
+      }
+    },
+    "pack.stroop.description": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sort by the ink, not the word"
+          }
+        }
+      }
+    },
+    "shape.circle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Circle"
+          }
+        }
+      }
+    },
+    "shape.square": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Square"
+          }
+        }
+      }
+    },
+    "shape.star": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Star"
+          }
+        }
+      }
+    },
+    "shape.triangle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Triangle"
+          }
+        }
+      }
+    }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }
 ```
 
@@ -4542,6 +4818,8 @@ enum AppSettings {
     static let hapticsEnabled = "settings.hapticsEnabled"
     static let tapToSort = "settings.tapToSort"
     static let colourHints = "settings.colourHints"
+    /// Id of the pack free play uses. The daily challenge always uses the built-in pack.
+    static let packID = "settings.packID"
 
     static func register(in defaults: UserDefaults = .standard) {
         defaults.register(defaults: [
@@ -4608,7 +4886,18 @@ final class AppEnvironment {
         )
     }
 
+    /// The built-in pack, always first in `packs`. The daily challenge uses it.
     var pack: ContentPack { packs[0] }
+
+    func pack(id: String) -> ContentPack? {
+        packs.first { $0.id == id }
+    }
+
+    /// The pack free play uses: the stored choice when it is installed, otherwise the built-in pack.
+    var selectedPack: ContentPack {
+        let stored = UserDefaults.standard.string(forKey: AppSettings.packID)
+        return stored.flatMap(pack(id:)) ?? pack
+    }
 
     func applySettings(from defaults: UserDefaults = .standard) {
         haptics.isEnabled = defaults.bool(forKey: AppSettings.hapticsEnabled)
@@ -4616,8 +4905,16 @@ final class AppEnvironment {
     }
 
     /// Creates and stores a new session. A random seed for a normal run, the day's seed for the daily.
+    /// Free play uses `packID` when given, else the selected pack; the daily always uses the built-in pack.
     @discardableResult
-    func startRun(daily: Bool, now: Date = .now) -> GameSession {
+    func startRun(daily: Bool, packID: String? = nil, now: Date = .now) -> GameSession {
+        var pack = daily ? self.pack : (packID.flatMap(self.pack(id:)) ?? selectedPack)
+        #if DEBUG
+        // UI tests pass "-debugPack <id>" to force a pack.
+        if let debugID = UserDefaults.standard.string(forKey: "debugPack"), let debugPack = self.pack(id: debugID) {
+            pack = debugPack
+        }
+        #endif
         let dayKey = daily ? DailySeed.dayKey(for: now) : nil
         let seed = daily ? DailySeed.seed(forDayKey: dayKey!) : UInt64.random(in: .min ... .max)
         let session = GameSession(pack: pack, seed: seed, isDaily: daily, dailyKey: dayKey,
@@ -5039,6 +5336,13 @@ struct ItemView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: size, height: size)
+            case let .word(textKey, colour):
+                Text(Localization.string(textKey).uppercased())
+                    .font(.system(size: size * 0.34, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color(hex: colour))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .frame(width: size * 1.6, height: size)
             }
             if let hint {
                 Text(hint)
@@ -5113,6 +5417,7 @@ extension Color {
     HStack {
         ItemView(visual: .shape(kind: .star, colour: "#F0E442"), hint: "Y", size: 60)
         ItemView(visual: .shape(kind: .triangle, colour: "#0072B2"), hint: nil, size: 60)
+        ItemView(visual: .word(textKey: "colour.red", colour: "#0072B2"), hint: nil, size: 60)
     }
 }
 ```
@@ -5549,6 +5854,7 @@ struct PlayView: View {
 
     private func hint(for item: Item) -> String? {
         guard colourHints else { return nil }
+        if case .word = item.visual { return nil }
         for dimension in session.pack.dimensions {
             if let valueID = item.attributes[dimension.id],
                let hintKey = dimension.value(id: valueID)?.hintKey {
@@ -5856,6 +6162,9 @@ struct StatisticsSections: View {
         Section("Speed") {
             row("Reaction", value: statistics.meanReaction?.secondsText ?? "–")
             row("Switch cost", value: statistics.switchCost?.signedMillisecondsText ?? "–")
+            if let conflictCost = statistics.conflictCost {
+                row("Interference", value: conflictCost.signedMillisecondsText)
+            }
         }
     }
 
@@ -5928,6 +6237,9 @@ struct ResultsView: View {
                     headline
                         .font(.headline)
                         .multilineTextAlignment(.center)
+                    Text(Localization.string(data.pack.nameKey))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                     if data.isDaily {
                         Text("Daily challenge")
                             .font(.caption2)
@@ -6110,6 +6422,7 @@ import SwipeSortEngine
 struct HomeView: View {
     @Environment(AppEnvironment.self) private var environment
     @State private var isRunPresented = false
+    @AppStorage(AppSettings.packID) private var packID = ContentPack.shapesAndColours.id
     private let launchRequests = LaunchRequests.shared
 
     private var todayKey: String { DailySeed.dayKey(for: .now) }
@@ -6126,6 +6439,20 @@ struct HomeView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .listRowBackground(Color.clear)
+
+                    if environment.packs.count > 1 {
+                        NavigationLink {
+                            ModePickerView()
+                        } label: {
+                            HStack {
+                                Label("Mode", systemImage: "square.grid.2x2")
+                                Spacer()
+                                Text(Localization.string((environment.pack(id: packID) ?? environment.pack).nameKey))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                    }
 
                     Button {
                         startRun(daily: true)
@@ -6621,6 +6948,8 @@ struct HistoryView: View {
                     if run.isDaily {
                         Image(systemName: "calendar").font(.system(size: 9))
                     }
+                    Text(Localization.string((environment.pack(id: run.packID) ?? environment.pack).nameKey))
+                    Text(verbatim: "·")
                     Group {
                         if run.completed {
                             Text("\(run.roundsCompleted) rounds")
@@ -6724,6 +7053,11 @@ nonisolated final class PlayScreenScreenshotTests: XCTestCase {
     @MainActor
     func testCaptureFourEdgeRoundWithTapTargets() {
         capture(named: "play-4edges-tap", launchArguments: ["-settings.tapToSort", "YES", "-debugStartRound", "5"])
+    }
+
+    @MainActor
+    func testCaptureStroopRound() {
+        capture(named: "play-stroop", launchArguments: ["-settings.tapToSort", "NO", "-debugPack", "stroop", "-debugStartRound", "2"])
     }
 
     @MainActor

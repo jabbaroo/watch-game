@@ -23,6 +23,9 @@ struct ResultsView: View {
                     headline
                         .font(.headline)
                         .multilineTextAlignment(.center)
+                    Text(Localization.string(data.pack.nameKey))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                     if data.isDaily {
                         Text("Daily challenge")
                             .font(.caption2)

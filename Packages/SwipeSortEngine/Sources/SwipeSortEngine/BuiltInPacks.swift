@@ -34,6 +34,6 @@ public extension ContentPack {
                 ))
             }
         }
-        return ContentPack(id: "shapes-colours", nameKey: "pack.shapes-colours", dimensions: [colourDimension, shapeDimension], items: items)
+        return ContentPack(id: "shapes-colours", nameKey: "pack.shapes-colours", descriptionKey: "pack.shapes-colours.description", dimensions: [colourDimension, shapeDimension], items: items)
     }()
 }

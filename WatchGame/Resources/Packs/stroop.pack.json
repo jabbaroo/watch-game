@@ -1,0 +1,249 @@
+{
+  "id": "stroop",
+  "nameKey": "pack.stroop",
+  "descriptionKey": "pack.stroop.description",
+  "dimensions": [
+    {
+      "id": "ink",
+      "nameKey": "dimension.ink",
+      "values": [
+        {
+          "id": "red",
+          "labelKey": "colour.red",
+          "hintKey": "hint.colour.red"
+        },
+        {
+          "id": "yellow",
+          "labelKey": "colour.yellow",
+          "hintKey": "hint.colour.yellow"
+        },
+        {
+          "id": "green",
+          "labelKey": "colour.green",
+          "hintKey": "hint.colour.green"
+        },
+        {
+          "id": "blue",
+          "labelKey": "colour.blue",
+          "hintKey": "hint.colour.blue"
+        }
+      ]
+    },
+    {
+      "id": "word",
+      "nameKey": "dimension.word",
+      "values": [
+        {
+          "id": "red",
+          "labelKey": "colour.red"
+        },
+        {
+          "id": "yellow",
+          "labelKey": "colour.yellow"
+        },
+        {
+          "id": "green",
+          "labelKey": "colour.green"
+        },
+        {
+          "id": "blue",
+          "labelKey": "colour.blue"
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": "red-in-red",
+      "attributes": {
+        "ink": "red",
+        "word": "red"
+      },
+      "visual": {
+        "type": "word",
+        "textKey": "colour.red",
+        "colour": "#D55E00"
+      }
+    },
+    {
+      "id": "yellow-in-red",
+      "attributes": {
+        "ink": "red",
+        "word": "yellow"
+      },
+      "visual": {
+        "type": "word",
+        "textKey": "colour.yellow",
+        "colour": "#D55E00"
+      }
+    },
+    {
+      "id": "green-in-red",
+      "attributes": {
+        "ink": "red",
+        "word": "green"
+      },
+      "visual": {
+        "type": "word",
+        "textKey": "colour.green",
+        "colour": "#D55E00"
+      }
+    },
+    {
+      "id": "blue-in-red",
+      "attributes": {
+        "ink": "red",
+        "word": "blue"
+      },
+      "visual": {
+        "type": "word",
+        "textKey": "colour.blue",
+        "colour": "#D55E00"
+      }
+    },
+    {
+      "id": "red-in-yellow",
+      "attributes": {
+        "ink": "yellow",
+        "word": "red"
+      },
+      "visual": {
+        "type": "word",
+        "textKey": "colour.red",
+        "colour": "#F0E442"
+      }
+    },
+    {
+      "id": "yellow-in-yellow",
+      "attributes": {
+        "ink": "yellow",
+        "word": "yellow"
+      },
+      "visual": {
+        "type": "word",
+        "textKey": "colour.yellow",
+        "colour": "#F0E442"
+      }
+    },
+    {
+      "id": "green-in-yellow",
+      "attributes": {
+        "ink": "yellow",
+        "word": "green"
+      },
+      "visual": {
+        "type": "word",
+        "textKey": "colour.green",
+        "colour": "#F0E442"
+      }
+    },
+    {
+      "id": "blue-in-yellow",
+      "attributes": {
+        "ink": "yellow",
+        "word": "blue"
+      },
+      "visual": {
+        "type": "word",
+        "textKey": "colour.blue",
+        "colour": "#F0E442"
+      }
+    },
+    {
+      "id": "red-in-green",
+      "attributes": {
+        "ink": "green",
+        "word": "red"
+      },
+      "visual": {
+        "type": "word",
+        "textKey": "colour.red",
+        "colour": "#009E73"
+      }
+    },
+    {
+      "id": "yellow-in-green",
+      "attributes": {
+        "ink": "green",
+        "word": "yellow"
+      },
+      "visual": {
+        "type": "word",
+        "textKey": "colour.yellow",
+        "colour": "#009E73"
+      }
+    },
+    {
+      "id": "green-in-green",
+      "attributes": {
+        "ink": "green",
+        "word": "green"
+      },
+      "visual": {
+        "type": "word",
+        "textKey": "colour.green",
+        "colour": "#009E73"
+      }
+    },
+    {
+      "id": "blue-in-green",
+      "attributes": {
+        "ink": "green",
+        "word": "blue"
+      },
+      "visual": {
+        "type": "word",
+        "textKey": "colour.blue",
+        "colour": "#009E73"
+      }
+    },
+    {
+      "id": "red-in-blue",
+      "attributes": {
+        "ink": "blue",
+        "word": "red"
+      },
+      "visual": {
+        "type": "word",
+        "textKey": "colour.red",
+        "colour": "#0072B2"
+      }
+    },
+    {
+      "id": "yellow-in-blue",
+      "attributes": {
+        "ink": "blue",
+        "word": "yellow"
+      },
+      "visual": {
+        "type": "word",
+        "textKey": "colour.yellow",
+        "colour": "#0072B2"
+      }
+    },
+    {
+      "id": "green-in-blue",
+      "attributes": {
+        "ink": "blue",
+        "word": "green"
+      },
+      "visual": {
+        "type": "word",
+        "textKey": "colour.green",
+        "colour": "#0072B2"
+      }
+    },
+    {
+      "id": "blue-in-blue",
+      "attributes": {
+        "ink": "blue",
+        "word": "blue"
+      },
+      "visual": {
+        "type": "word",
+        "textKey": "colour.blue",
+        "colour": "#0072B2"
+      }
+    }
+  ]
+}

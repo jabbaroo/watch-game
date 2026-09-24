@@ -4,6 +4,7 @@ import SwipeSortEngine
 struct HomeView: View {
     @Environment(AppEnvironment.self) private var environment
     @State private var isRunPresented = false
+    @AppStorage(AppSettings.packID) private var packID = ContentPack.shapesAndColours.id
     private let launchRequests = LaunchRequests.shared
 
     private var todayKey: String { DailySeed.dayKey(for: .now) }
@@ -20,6 +21,20 @@ struct HomeView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .listRowBackground(Color.clear)
+
+                    if environment.packs.count > 1 {
+                        NavigationLink {
+                            ModePickerView()
+                        } label: {
+                            HStack {
+                                Label("Mode", systemImage: "square.grid.2x2")
+                                Spacer()
+                                Text(Localization.string((environment.pack(id: packID) ?? environment.pack).nameKey))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                    }
 
                     Button {
                         startRun(daily: true)

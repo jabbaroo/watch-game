@@ -31,6 +31,9 @@ struct StatisticsSections: View {
         Section("Speed") {
             row("Reaction", value: statistics.meanReaction?.secondsText ?? "–")
             row("Switch cost", value: statistics.switchCost?.signedMillisecondsText ?? "–")
+            if let conflictCost = statistics.conflictCost {
+                row("Interference", value: conflictCost.signedMillisecondsText)
+            }
         }
     }
 

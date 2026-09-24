@@ -93,6 +93,34 @@ import Testing
         #expect(stats.switchCost == .milliseconds(400))
     }
 
+    @Test func conflictCostComparesIncongruentWithCongruent() {
+        func stroop(_ index: Int, ink: String, word: String, ms: Int) -> ItemResult {
+            ItemResult(roundIndex: 0, itemIndex: index, dimensionID: "ink", attributes: ["ink": ink, "word": word],
+                       expectedCategoryID: ink, answeredCategoryID: ink, correct: true, timedOut: false,
+                       reaction: .milliseconds(ms), window: .seconds(2), points: 100)
+        }
+        let items = [
+            stroop(0, ink: "red", word: "red", ms: 500), stroop(1, ink: "blue", word: "blue", ms: 500), stroop(2, ink: "green", word: "green", ms: 500),
+            stroop(3, ink: "red", word: "blue", ms: 800), stroop(4, ink: "blue", word: "red", ms: 800), stroop(5, ink: "green", word: "red", ms: 800),
+        ]
+        #expect(items[0].isCongruent)
+        #expect(!items[3].isCongruent)
+        let stats = RunStatistics.compute(rounds: [round(0, dimension: "ink", items: items)])
+        #expect(stats.conflictCost == .milliseconds(300))
+        let tooFew = RunStatistics.compute(rounds: [round(0, dimension: "ink", items: Array(items[1...]))])
+        #expect(tooFew.conflictCost == nil)
+    }
+
+    @Test func singleDimensionItemsAreNeverCongruent() {
+        let shapes = (0..<6).map { index in
+            ItemResult(roundIndex: 0, itemIndex: index, dimensionID: "colour", attributes: ["colour": "red", "shape": "star"],
+                       expectedCategoryID: "red", answeredCategoryID: "red", correct: true, timedOut: false,
+                       reaction: .milliseconds(500), window: .seconds(2), points: 100)
+        }
+        #expect(!shapes[0].isCongruent)
+        #expect(RunStatistics.compute(rounds: [round(0, items: shapes)]).conflictCost == nil)
+    }
+
     @Test func switchCostAveragesAcrossQualifyingRounds() {
         let roundA = round(0, items: [800, 800, 800, 400, 400, 400].enumerated().map { item($0.offset, reaction: .milliseconds($0.element)) })
         let roundB = round(1, items: [600, 600, 600, 400, 400, 400].enumerated().map { item($0.offset, reaction: .milliseconds($0.element)) })
