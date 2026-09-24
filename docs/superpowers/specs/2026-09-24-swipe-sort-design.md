@@ -162,7 +162,7 @@ Sound is on by default but never required to play. The audio session uses the am
 | runEnded | sting |
 | lifeEarned | none |
 
-Because the streak resets on any error, the pitch resets with it.
+Because the streak resets on any error, the pitch resets with it. Rapid cues replace whatever is still playing; the perfect-round fanfare and the run-end sting queue behind the current sound so neither is cut off. The audio session and engine run only while the Sounds setting is on.
 
 ### 5.3 Visual effects
 
@@ -265,7 +265,7 @@ Additional packs are JSON files in the app bundle under `Packs/`. The loader dec
 - Data: the app writes a `WidgetSummary` JSON file (`dailyKey` as the local calendar day in `yyyy-MM-dd`, `dailyPlayedToday`, `dailyStreak`, `usualPlayHour` optional) to the App Group container `group.com.pynto.sortsprint` at launch, at run end and after Reset history, then reloads widget timelines. The widget never opens the SwiftData store.
 - Display state is derived from the file's `dailyKey` against the current local date, never taken verbatim: if `dailyKey` is today, show the file's values; if `dailyKey` is yesterday and `dailyPlayedToday` is true, show unplayed today with the file's streak; otherwise show unplayed today with a streak of zero.
 - Timeline: an entry for now and an entry at the next local midnight, both computed with the rule above for their own dates, with reload policy at end so the provider is queried again after midnight. The status stays correct across the day boundary without the app running.
-- Deep link: the app handles `onOpenURL`. If no run is in progress it starts the daily; if a run is in progress the link is ignored.
+- Deep link: the app handles `onOpenURL`. If no run is in progress it starts the daily; a run still being played (intro, play or paused) wins and the link is ignored; a finished run sitting on its results screen is dismissed and the daily starts.
 - Relevance: `usualPlayHour` is the most common start hour among the last 30 completed runs when there are at least 3; the app registers a RelevanceKit date-based context for a one-hour interval around it, or none.
 - Error handling: if the App Group container is unavailable the app skips the write and logs; the widget shows the default "Play today's challenge" state.
 

@@ -157,7 +157,7 @@ final class GameSession {
                 wakeTask?.cancel()
                 activeItem = nil
                 self.summary = summary
-                isNewBest = summary.completed && summary.score > (previousBest ?? -1)
+                isNewBest = summary.completed && summary.score > 0 && summary.score > (previousBest ?? 0)
                 history.finish(runEntry, summary: summary)
             case .feedback(let cue):
                 haptics.play(cue)

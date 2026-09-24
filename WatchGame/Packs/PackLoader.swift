@@ -37,7 +37,7 @@ enum PackLoader {
     private static func packURLs(in bundle: Bundle) -> [URL] {
         (bundle.urls(forResourcesWithExtension: "json", subdirectory: nil) ?? [])
             .filter { $0.lastPathComponent.hasSuffix(".pack.json") }
-            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+            .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
     }
 
     private static func load(_ url: URL) throws -> ContentPack {

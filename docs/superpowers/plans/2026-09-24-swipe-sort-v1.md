@@ -4001,7 +4001,7 @@ import OSLog
 import SwipeSortEngine
 
 /// The packs available to play: the built-in shapes pack first, then every valid
-/// `*.pack.json` in the bundle, sorted by file name.
+/// `*.pack.json` in the bundle, sorted by file name (a numeric prefix sets the order on Home).
 enum PackLoader {
     private static let logger = Logger(subsystem: "com.pynto.sortsprint", category: "packs")
 
@@ -4035,7 +4035,7 @@ enum PackLoader {
     private static func packURLs(in bundle: Bundle) -> [URL] {
         (bundle.urls(forResourcesWithExtension: "json", subdirectory: nil) ?? [])
             .filter { $0.lastPathComponent.hasSuffix(".pack.json") }
-            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+            .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
     }
 
     private static func load(_ url: URL) throws -> ContentPack {
@@ -4924,32 +4924,56 @@ final class SilentSound: SoundService {
     func play(_ cue: FeedbackCue) {}
 }
 
-/// Plays the bundled sounds through an AVAudioEngine player node.
-/// Any setup failure disables sound for the session and leaves gameplay untouched.
+/// Plays the bundled sounds through an AVAudioEngine player node. The audio session and
+/// engine run only while sound is enabled. Any setup failure disables sound for the session
+/// and leaves gameplay untouched.
 @MainActor
 final class EngineSound: SoundService {
     private static let logger = Logger(subsystem: "com.pynto.sortsprint", category: "sound")
 
-    var isEnabled: Bool
+    var isEnabled: Bool {
+        didSet {
+            guard isEnabled != oldValue else { return }
+            if isEnabled { startIfNeeded() } else { stop() }
+        }
+    }
+    private let bundle: Bundle
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
     private var buffers: [SoundAsset: AVAudioPCMBuffer] = [:]
-    private var isReady = false
+    private var isConfigured = false
+    private var isBroken = false
 
     init(isEnabled: Bool = true, bundle: Bundle = .main) {
         self.isEnabled = isEnabled
+        self.bundle = bundle
+        if isEnabled { startIfNeeded() }
+    }
+
+    private func startIfNeeded() {
+        guard !isBroken else { return }
         do {
-            try configure(bundle: bundle)
-            isReady = true
+            if !isConfigured {
+                try configure(bundle: bundle)
+                isConfigured = true
+            }
+            try AVAudioSession.sharedInstance().setActive(true)
+            if !engine.isRunning { try engine.start() }
         } catch {
+            isBroken = true
             Self.logger.error("Sound disabled: \(String(describing: error), privacy: .public)")
         }
+    }
+
+    private func stop() {
+        player.stop()
+        engine.stop()
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
     private func configure(bundle: Bundle) throws {
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.ambient, mode: .default, options: [])
-        try session.setActive(true)
 
         for asset in SoundAsset.allCases {
             guard let url = bundle.url(forResource: asset.fileName, withExtension: "wav") else {
@@ -4964,21 +4988,26 @@ final class EngineSound: SoundService {
         }
 
         guard let format = buffers[.wrong]?.format else { throw CocoaError(.fileReadCorruptFile) }
+        for (asset, buffer) in buffers where buffer.format != format {
+            throw SoundError.formatMismatch(asset.fileName)
+        }
         engine.attach(player)
         engine.connect(player, to: engine.mainMixerNode, format: format)
         engine.prepare()
-        try engine.start()
     }
 
+    enum SoundError: Error { case formatMismatch(String) }
+
     func play(_ cue: FeedbackCue) {
-        guard isEnabled, isReady, let asset = cue.sound, let buffer = buffers[asset] else { return }
+        guard isEnabled, let asset = cue.sound, let buffer = buffers[asset] else { return }
         if !engine.isRunning {
-            do { try engine.start() } catch {
-                Self.logger.error("Engine restart failed: \(String(describing: error), privacy: .public)")
-                return
-            }
+            startIfNeeded()
+            guard engine.isRunning else { return }
         }
-        player.scheduleBuffer(buffer, at: nil, options: .interrupts)
+        // Rapid cues replace whatever is playing; the fanfare and the run-end sting queue behind it,
+        // so a perfect final round is heard before the sting rather than cut off by it.
+        let queues = cue == .perfectRound || cue == .runEnded
+        player.scheduleBuffer(buffer, at: nil, options: queues ? [] : .interrupts)
         if !player.isPlaying {
             player.play()
         }
@@ -5544,7 +5573,7 @@ final class GameSession {
                 wakeTask?.cancel()
                 activeItem = nil
                 self.summary = summary
-                isNewBest = summary.completed && summary.score > (previousBest ?? -1)
+                isNewBest = summary.completed && summary.score > 0 && summary.score > (previousBest ?? 0)
                 history.finish(runEntry, summary: summary)
             case .feedback(let cue):
                 haptics.play(cue)
@@ -6073,8 +6102,20 @@ struct RoundIntroView: View {
         for (edge, category) in plan.mapping.categoryByEdge {
             labels[edge] = session.categoryLabel(category, in: plan)
         }
+        let spoken = SwipeEdge.allCases.compactMap { edge in labels[edge].map { "\(edgeName(edge)): \($0)" } }.joined(separator: ", ")
         return EdgeLabelsView(labels: labels, highlighted: nil, tapToSort: false) { _ in }
             .scaleEffect(0.85)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(spoken))
+    }
+
+    private func edgeName(_ edge: SwipeEdge) -> String {
+        switch edge {
+        case .up: String(localized: "Up")
+        case .down: String(localized: "Down")
+        case .left: String(localized: "Left")
+        case .right: String(localized: "Right")
+        }
     }
 }
 
@@ -6267,8 +6308,10 @@ struct PlayView: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(itemLabel(for: active))
             .accessibilityActions {
-                ForEach(session.currentPlan.mapping.edges, id: \.self) { edge in
-                    Button(labels[edge] ?? edge.rawValue) { session.answer(edge) }
+                if !active.isPrimer {
+                    ForEach(session.currentPlan.mapping.edges, id: \.self) { edge in
+                        Button(labels[edge] ?? edge.rawValue) { session.answer(edge) }
+                    }
                 }
             }
         } else if let resolved = session.resolvedItem {
@@ -6893,10 +6936,9 @@ import SwipeSortEngine
 struct HomeView: View {
     @Environment(AppEnvironment.self) private var environment
     @State private var isRunPresented = false
+    @State private var dailyStatus = ""
     @AppStorage(AppSettings.packID) private var packID = ContentPack.shapesAndColours.id
     private let launchRequests = LaunchRequests.shared
-
-    private var todayKey: String { DailySeed.dayKey(for: .now) }
 
     var body: some View {
         NavigationStack {
@@ -6952,12 +6994,12 @@ struct HomeView: View {
             }
             .navigationTitle("Sort Sprint")
         }
-        .fullScreenCover(isPresented: $isRunPresented, onDismiss: dismissRun) {
+        .fullScreenCover(isPresented: $isRunPresented, onDismiss: runDidDismiss) {
             if let session = environment.session {
                 RunView(
                     session: session,
                     onPlayAgain: { startRun(daily: session.isDaily, packID: session.isDaily ? nil : session.pack.id) },
-                    onDismiss: dismissRun
+                    onDismiss: { isRunPresented = false }
                 )
                 .id(ObjectIdentifier(session))
                 .interactiveDismissDisabled()
@@ -6972,15 +7014,22 @@ struct HomeView: View {
                 consumeRequests()
             }
         }
-        .onAppear(perform: consumeRequests)
+        .onAppear {
+            refreshDailyStatus()
+            consumeRequests()
+        }
         .onChange(of: launchRequests.dailyRequested) { _, _ in consumeRequests() }
+        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
+            refreshDailyStatus()
+        }
     }
 
-    private var dailyStatus: String {
+    /// Recomputed on appear, after a run and at midnight; the store itself is not observable.
+    private func refreshDailyStatus() {
         let streak = environment.history.dailyStreak()
-        let played = environment.history.hasCompletedDaily(dayKey: todayKey)
+        let played = environment.history.hasCompletedDaily(dayKey: DailySeed.dayKey(for: .now))
         let streakText = streak == 1 ? String(localized: "1 day streak") : String(localized: "\(streak) day streak")
-        return played ? String(localized: "Done today · \(streakText)") : streakText
+        dailyStatus = played ? String(localized: "Done today · \(streakText)") : streakText
     }
 
     private func startRun(daily: Bool, packID: String? = nil) {
@@ -6992,17 +7041,24 @@ struct HomeView: View {
         isRunPresented = true
     }
 
-    private func dismissRun() {
-        isRunPresented = false
+    /// Runs once the cover has finished animating out, so Results stays on screen until then.
+    private func runDidDismiss() {
         environment.session = nil
         environment.refreshWidgetSummary()
+        refreshDailyStatus()
+        consumeRequests()
     }
 
-    /// Starts the daily if the widget or an intent asked for it and no run is in progress.
+    /// Starts the daily if the widget or an intent asked for it. A run that is still being played
+    /// (intro, play or paused) wins; a finished run on its results screen is replaced.
     private func consumeRequests() {
         guard launchRequests.dailyRequested else { return }
-        if environment.session != nil, isRunPresented {
-            _ = launchRequests.takeDailyRequest()
+        if let session = environment.session, isRunPresented {
+            if session.screen == .results {
+                isRunPresented = false   // runDidDismiss consumes the request after the animation
+            } else {
+                _ = launchRequests.takeDailyRequest()
+            }
             return
         }
         if launchRequests.takeDailyRequest() {
@@ -7376,10 +7432,12 @@ struct HistorySummary {
 
     static let chartLimit = 30
     static let minimumRunsPerBucket = 3
+    /// Statistics are derived for at most this many recent completed runs, so History opens quickly after years of play.
+    static let statisticsLimit = 100
 
     @MainActor
     static func make(store: HistoryStore, calendar: Calendar = .current, now: Date = .now) -> HistorySummary {
-        let completed = store.completedRuns()
+        let completed = store.completedRuns(limit: statisticsLimit)
         let statisticsByRun = Dictionary(uniqueKeysWithValues: completed.map { ($0.id, RunStatistics.compute(rounds: $0.roundResults)) })
         let plotted = Array(completed.prefix(chartLimit)).reversed()
         let points = plotted.enumerated().map { offset, run -> Point in
@@ -7411,12 +7469,12 @@ struct HistorySummary {
         let sharpest = reactionsByBucket
             .filter { $0.value.count >= minimumRunsPerBucket }
             .map { (bucket: $0.key, mean: $0.value.reduce(0, +) / Double($0.value.count)) }
-            .min { $0.mean < $1.mean }?
+            .min { ($0.mean, $0.bucket.rawValue) < ($1.mean, $1.bucket.rawValue) }?
             .bucket
 
         return HistorySummary(
-            bestScore: completed.map(\.score).max(),
-            runsPlayed: completed.count,
+            bestScore: store.bestScore(),
+            runsPlayed: store.completedRuns().count,
             dailyStreak: store.dailyStreak(today: now, calendar: calendar),
             points: points,
             sharpestTimeOfDay: sharpest,
@@ -7998,12 +8056,13 @@ import RelevanceKit
 import SwiftUI
 import WidgetKit
 
-struct DailyEntry: TimelineEntry {
+nonisolated struct DailyEntry: TimelineEntry {
     let date: Date
     let state: WidgetSummary.DisplayState
 }
 
-struct DailyProvider: TimelineProvider {
+// nonisolated: WidgetKit calls the provider from its own context; the app target defaults to main-actor isolation.
+nonisolated struct DailyProvider: TimelineProvider {
     func placeholder(in context: Context) -> DailyEntry {
         DailyEntry(date: .now, state: .init(playedToday: false, streak: 3))
     }
@@ -8026,9 +8085,8 @@ struct DailyProvider: TimelineProvider {
         guard let hour = WidgetSummary.load()?.usualPlayHour,
               let start = Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: .now)
         else { return WidgetRelevance([]) }
-        let windowStart = start.addingTimeInterval(-30 * 60)
-        let windowEnd = windowStart.addingTimeInterval(60 * 60)
-        return WidgetRelevance([WidgetRelevanceAttribute(context: .date(from: windowStart, to: windowEnd))])
+        let window = DateInterval(start: start.addingTimeInterval(-30 * 60), duration: 60 * 60)
+        return WidgetRelevance([WidgetRelevanceAttribute(context: .date(interval: window, kind: .scheduled))])
     }
 
     private func entry(for date: Date) -> DailyEntry {

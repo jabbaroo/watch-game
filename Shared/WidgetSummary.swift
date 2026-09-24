@@ -1,7 +1,7 @@
 import Foundation
 
 /// The small file the app writes for the widget. Both targets compile this file.
-struct WidgetSummary: Codable, Equatable, Sendable {
+nonisolated struct WidgetSummary: Codable, Equatable, Sendable {
     static let appGroup = "group.com.pynto.sortsprint"
     static let fileName = "widget-summary.json"
 
@@ -31,7 +31,7 @@ struct WidgetSummary: Codable, Equatable, Sendable {
 
     static func dayKey(for date: Date, calendar: Calendar = .current) -> String {
         let components = calendar.dateComponents([.year, .month, .day], from: date)
-        return String(format: "%04d-%02d-%02d", components.year ?? 0, components.month ?? 0, components.day ?? 0)
+        return String(format: "%04ld-%02ld-%02ld", components.year ?? 0, components.month ?? 0, components.day ?? 0)
     }
 
     static var fileURL: URL? {

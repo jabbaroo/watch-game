@@ -57,32 +57,56 @@ final class SilentSound: SoundService {
     func play(_ cue: FeedbackCue) {}
 }
 
-/// Plays the bundled sounds through an AVAudioEngine player node.
-/// Any setup failure disables sound for the session and leaves gameplay untouched.
+/// Plays the bundled sounds through an AVAudioEngine player node. The audio session and
+/// engine run only while sound is enabled. Any setup failure disables sound for the session
+/// and leaves gameplay untouched.
 @MainActor
 final class EngineSound: SoundService {
     private static let logger = Logger(subsystem: "com.pynto.sortsprint", category: "sound")
 
-    var isEnabled: Bool
+    var isEnabled: Bool {
+        didSet {
+            guard isEnabled != oldValue else { return }
+            if isEnabled { startIfNeeded() } else { stop() }
+        }
+    }
+    private let bundle: Bundle
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
     private var buffers: [SoundAsset: AVAudioPCMBuffer] = [:]
-    private var isReady = false
+    private var isConfigured = false
+    private var isBroken = false
 
     init(isEnabled: Bool = true, bundle: Bundle = .main) {
         self.isEnabled = isEnabled
+        self.bundle = bundle
+        if isEnabled { startIfNeeded() }
+    }
+
+    private func startIfNeeded() {
+        guard !isBroken else { return }
         do {
-            try configure(bundle: bundle)
-            isReady = true
+            if !isConfigured {
+                try configure(bundle: bundle)
+                isConfigured = true
+            }
+            try AVAudioSession.sharedInstance().setActive(true)
+            if !engine.isRunning { try engine.start() }
         } catch {
+            isBroken = true
             Self.logger.error("Sound disabled: \(String(describing: error), privacy: .public)")
         }
+    }
+
+    private func stop() {
+        player.stop()
+        engine.stop()
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
     private func configure(bundle: Bundle) throws {
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.ambient, mode: .default, options: [])
-        try session.setActive(true)
 
         for asset in SoundAsset.allCases {
             guard let url = bundle.url(forResource: asset.fileName, withExtension: "wav") else {
@@ -97,21 +121,26 @@ final class EngineSound: SoundService {
         }
 
         guard let format = buffers[.wrong]?.format else { throw CocoaError(.fileReadCorruptFile) }
+        for (asset, buffer) in buffers where buffer.format != format {
+            throw SoundError.formatMismatch(asset.fileName)
+        }
         engine.attach(player)
         engine.connect(player, to: engine.mainMixerNode, format: format)
         engine.prepare()
-        try engine.start()
     }
 
+    enum SoundError: Error { case formatMismatch(String) }
+
     func play(_ cue: FeedbackCue) {
-        guard isEnabled, isReady, let asset = cue.sound, let buffer = buffers[asset] else { return }
+        guard isEnabled, let asset = cue.sound, let buffer = buffers[asset] else { return }
         if !engine.isRunning {
-            do { try engine.start() } catch {
-                Self.logger.error("Engine restart failed: \(String(describing: error), privacy: .public)")
-                return
-            }
+            startIfNeeded()
+            guard engine.isRunning else { return }
         }
-        player.scheduleBuffer(buffer, at: nil, options: .interrupts)
+        // Rapid cues replace whatever is playing; the fanfare and the run-end sting queue behind it,
+        // so a perfect final round is heard before the sting rather than cut off by it.
+        let queues = cue == .perfectRound || cue == .runEnded
+        player.scheduleBuffer(buffer, at: nil, options: queues ? [] : .interrupts)
         if !player.isPlaying {
             player.play()
         }

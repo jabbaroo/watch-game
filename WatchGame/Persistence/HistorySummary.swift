@@ -90,10 +90,12 @@ struct HistorySummary {
 
     static let chartLimit = 30
     static let minimumRunsPerBucket = 3
+    /// Statistics are derived for at most this many recent completed runs, so History opens quickly after years of play.
+    static let statisticsLimit = 100
 
     @MainActor
     static func make(store: HistoryStore, calendar: Calendar = .current, now: Date = .now) -> HistorySummary {
-        let completed = store.completedRuns()
+        let completed = store.completedRuns(limit: statisticsLimit)
         let statisticsByRun = Dictionary(uniqueKeysWithValues: completed.map { ($0.id, RunStatistics.compute(rounds: $0.roundResults)) })
         let plotted = Array(completed.prefix(chartLimit)).reversed()
         let points = plotted.enumerated().map { offset, run -> Point in
@@ -125,12 +127,12 @@ struct HistorySummary {
         let sharpest = reactionsByBucket
             .filter { $0.value.count >= minimumRunsPerBucket }
             .map { (bucket: $0.key, mean: $0.value.reduce(0, +) / Double($0.value.count)) }
-            .min { $0.mean < $1.mean }?
+            .min { ($0.mean, $0.bucket.rawValue) < ($1.mean, $1.bucket.rawValue) }?
             .bucket
 
         return HistorySummary(
-            bestScore: completed.map(\.score).max(),
-            runsPlayed: completed.count,
+            bestScore: store.bestScore(),
+            runsPlayed: store.completedRuns().count,
             dailyStreak: store.dailyStreak(today: now, calendar: calendar),
             points: points,
             sharpestTimeOfDay: sharpest,

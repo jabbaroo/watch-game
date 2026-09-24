@@ -84,8 +84,20 @@ struct RoundIntroView: View {
         for (edge, category) in plan.mapping.categoryByEdge {
             labels[edge] = session.categoryLabel(category, in: plan)
         }
+        let spoken = SwipeEdge.allCases.compactMap { edge in labels[edge].map { "\(edgeName(edge)): \($0)" } }.joined(separator: ", ")
         return EdgeLabelsView(labels: labels, highlighted: nil, tapToSort: false) { _ in }
             .scaleEffect(0.85)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(spoken))
+    }
+
+    private func edgeName(_ edge: SwipeEdge) -> String {
+        switch edge {
+        case .up: String(localized: "Up")
+        case .down: String(localized: "Down")
+        case .left: String(localized: "Left")
+        case .right: String(localized: "Right")
+        }
     }
 }
 

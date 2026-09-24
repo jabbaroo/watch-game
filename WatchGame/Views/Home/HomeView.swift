@@ -4,10 +4,9 @@ import SwipeSortEngine
 struct HomeView: View {
     @Environment(AppEnvironment.self) private var environment
     @State private var isRunPresented = false
+    @State private var dailyStatus = ""
     @AppStorage(AppSettings.packID) private var packID = ContentPack.shapesAndColours.id
     private let launchRequests = LaunchRequests.shared
-
-    private var todayKey: String { DailySeed.dayKey(for: .now) }
 
     var body: some View {
         NavigationStack {
@@ -63,12 +62,12 @@ struct HomeView: View {
             }
             .navigationTitle("Sort Sprint")
         }
-        .fullScreenCover(isPresented: $isRunPresented, onDismiss: dismissRun) {
+        .fullScreenCover(isPresented: $isRunPresented, onDismiss: runDidDismiss) {
             if let session = environment.session {
                 RunView(
                     session: session,
                     onPlayAgain: { startRun(daily: session.isDaily, packID: session.isDaily ? nil : session.pack.id) },
-                    onDismiss: dismissRun
+                    onDismiss: { isRunPresented = false }
                 )
                 .id(ObjectIdentifier(session))
                 .interactiveDismissDisabled()
@@ -83,15 +82,22 @@ struct HomeView: View {
                 consumeRequests()
             }
         }
-        .onAppear(perform: consumeRequests)
+        .onAppear {
+            refreshDailyStatus()
+            consumeRequests()
+        }
         .onChange(of: launchRequests.dailyRequested) { _, _ in consumeRequests() }
+        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
+            refreshDailyStatus()
+        }
     }
 
-    private var dailyStatus: String {
+    /// Recomputed on appear, after a run and at midnight; the store itself is not observable.
+    private func refreshDailyStatus() {
         let streak = environment.history.dailyStreak()
-        let played = environment.history.hasCompletedDaily(dayKey: todayKey)
+        let played = environment.history.hasCompletedDaily(dayKey: DailySeed.dayKey(for: .now))
         let streakText = streak == 1 ? String(localized: "1 day streak") : String(localized: "\(streak) day streak")
-        return played ? String(localized: "Done today · \(streakText)") : streakText
+        dailyStatus = played ? String(localized: "Done today · \(streakText)") : streakText
     }
 
     private func startRun(daily: Bool, packID: String? = nil) {
@@ -103,17 +109,24 @@ struct HomeView: View {
         isRunPresented = true
     }
 
-    private func dismissRun() {
-        isRunPresented = false
+    /// Runs once the cover has finished animating out, so Results stays on screen until then.
+    private func runDidDismiss() {
         environment.session = nil
         environment.refreshWidgetSummary()
+        refreshDailyStatus()
+        consumeRequests()
     }
 
-    /// Starts the daily if the widget or an intent asked for it and no run is in progress.
+    /// Starts the daily if the widget or an intent asked for it. A run that is still being played
+    /// (intro, play or paused) wins; a finished run on its results screen is replaced.
     private func consumeRequests() {
         guard launchRequests.dailyRequested else { return }
-        if environment.session != nil, isRunPresented {
-            _ = launchRequests.takeDailyRequest()
+        if let session = environment.session, isRunPresented {
+            if session.screen == .results {
+                isRunPresented = false   // runDidDismiss consumes the request after the animation
+            } else {
+                _ = launchRequests.takeDailyRequest()
+            }
             return
         }
         if launchRequests.takeDailyRequest() {

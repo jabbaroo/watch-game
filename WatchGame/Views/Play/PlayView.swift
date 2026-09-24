@@ -117,8 +117,10 @@ struct PlayView: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(itemLabel(for: active))
             .accessibilityActions {
-                ForEach(session.currentPlan.mapping.edges, id: \.self) { edge in
-                    Button(labels[edge] ?? edge.rawValue) { session.answer(edge) }
+                if !active.isPrimer {
+                    ForEach(session.currentPlan.mapping.edges, id: \.self) { edge in
+                        Button(labels[edge] ?? edge.rawValue) { session.answer(edge) }
+                    }
                 }
             }
         } else if let resolved = session.resolvedItem {

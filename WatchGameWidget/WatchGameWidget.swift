@@ -2,12 +2,13 @@ import RelevanceKit
 import SwiftUI
 import WidgetKit
 
-struct DailyEntry: TimelineEntry {
+nonisolated struct DailyEntry: TimelineEntry {
     let date: Date
     let state: WidgetSummary.DisplayState
 }
 
-struct DailyProvider: TimelineProvider {
+// nonisolated: WidgetKit calls the provider from its own context; the app target defaults to main-actor isolation.
+nonisolated struct DailyProvider: TimelineProvider {
     func placeholder(in context: Context) -> DailyEntry {
         DailyEntry(date: .now, state: .init(playedToday: false, streak: 3))
     }
@@ -30,9 +31,8 @@ struct DailyProvider: TimelineProvider {
         guard let hour = WidgetSummary.load()?.usualPlayHour,
               let start = Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: .now)
         else { return WidgetRelevance([]) }
-        let windowStart = start.addingTimeInterval(-30 * 60)
-        let windowEnd = windowStart.addingTimeInterval(60 * 60)
-        return WidgetRelevance([WidgetRelevanceAttribute(context: .date(from: windowStart, to: windowEnd))])
+        let window = DateInterval(start: start.addingTimeInterval(-30 * 60), duration: 60 * 60)
+        return WidgetRelevance([WidgetRelevanceAttribute(context: .date(interval: window, kind: .scheduled))])
     }
 
     private func entry(for date: Date) -> DailyEntry {
