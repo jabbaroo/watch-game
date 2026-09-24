@@ -5,7 +5,7 @@ import json
 import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-OUT = ROOT / "WatchGame" / "Resources" / "Packs" / "stroop.pack.json"
+OUT = ROOT / "WatchGame" / "Resources" / "Packs" / "10-stroop.pack.json"
 COLOURS = [("red", "#D55E00"), ("yellow", "#F0E442"), ("green", "#009E73"), ("blue", "#0072B2")]
 
 pack = {

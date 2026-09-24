@@ -4,7 +4,7 @@ import json
 import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-OUT = ROOT / "WatchGame" / "Resources" / "Packs" / "nback.pack.json"
+OUT = ROOT / "WatchGame" / "Resources" / "Packs" / "30-nback.pack.json"
 COLOURS = [("red", "#D55E00"), ("yellow", "#F0E442"), ("green", "#009E73"), ("blue", "#0072B2")]
 SHAPES = ["circle", "square", "triangle", "star"]
 
