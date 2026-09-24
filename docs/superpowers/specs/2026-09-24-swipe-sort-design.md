@@ -1,14 +1,14 @@
 # Swipe Sort: watchOS sorting game design
 
 Date: 2026-09-24
-Status: approved (revision 4; reviewer-approved at revision 3, advisory wording folded in)
+Status: approved (revision 5; timing tuned from first play-testing on 2026-09-24)
 Working title: Swipe Sort (project and target name `WatchGame`; display name is configurable and will change when a final name is chosen)
 
 ## 1. Summary
 
 Swipe Sort is a standalone Apple Watch game. An item appears in the centre of the screen and the player flicks it toward the screen edge that matches its category. Each round has one sorting rule (for example "sort by colour") and a fixed mapping of categories to edges. Between rounds the rule changes and the edge mapping reshuffles. Re-learning the mapping after a rule switch is the cognitive hook; reaction speed under a shrinking time window is the arcade hook.
 
-A run is 8 rounds of 45 seconds. Players have 3 lives, lose one per error, and earn one back for a perfect round. Every item answered is recorded so the results screen can break errors down, and history charts show how the player changes over time.
+A run is 8 rounds of 40 seconds. Players have 3 lives, lose one per error, and earn one back for a perfect round. Every item answered is recorded so the results screen can break errors down, and history charts show how the player changes over time.
 
 Decisions already made with the product owner:
 
@@ -27,7 +27,7 @@ Decisions already made with the product owner:
 Goals for version 1:
 
 - A complete, polished, App Store ready watch-only game.
-- Sessions of roughly 6 to 8 minutes for a full run, with every run kept in the run list even when it ends early.
+- Sessions of roughly 5 to 7 minutes for a full run, with every run kept in the run list even when it ends early.
 - Feedback that feels rewarding on the wrist: haptics first, sound and visuals layered on top.
 - Deterministic, unit-tested game logic separated from the SwiftUI layer.
 - A content pack format that supports shapes drawn in code today and bundled images tomorrow.
@@ -45,7 +45,7 @@ Non-goals for version 1 (explicitly deferred):
 
 ### 3.1 Run structure
 
-- A run is 8 rounds. Each round lasts 45 seconds of play time. Paused time does not count.
+- A run is 8 rounds. Each round lasts 40 seconds of play time. Paused time does not count.
 - Before every round, an interstitial shows the round number, the rule ("Sort by colour"), the edge mapping, lives and score. It auto-starts after 2.5 seconds with a visible countdown ring; tapping starts it immediately. The countdown stops while the scene is inactive or the display luminance is reduced and restarts from 2.5 seconds when the scene becomes active again.
 - Rounds rotate through the pack's dimensions in order, starting with the first. With the version 1 pack this alternates colour, shape, colour, shape and so on.
 - Category count ramps: rounds 1 and 2 use 2 categories, rounds 3 and 4 use 3, rounds 5 to 8 use 4. If a dimension has fewer values than the ramp asks for, the count is capped at the number of values.
@@ -60,7 +60,8 @@ Non-goals for version 1 (explicitly deferred):
 - The same target category never appears more than twice in a row.
 - Item selection is two steps: pick the target category (respecting the two-in-a-row rule), then pick uniformly among the pack's items whose value on the active dimension is that category. A pack therefore never needs every attribute combination.
 - Every item has a time window, fixed when the item appears. If the player has not answered when the window closes, the item times out.
-- The window for round r starts at 2.0 seconds and falls by 0.15 seconds per round, so round 8 starts at 0.95 seconds. The current streak trims the window further: 0.05 seconds for every 5 consecutive correct answers, up to 0.3 seconds. The trim is a function of the streak at the moment the item appears, so an error resets the streak and the next item gets the round's untrimmed window. The window never drops below 0.8 seconds.
+- Each round has a base window: 2.0, 1.9, 1.75, 1.6, 1.45, 1.3, 1.15 and 1.0 seconds for rounds 1 to 8. Early rounds are comfortable; by the last rounds the player has to be quick. The current streak trims the window further: 0.05 seconds for every 5 consecutive correct answers, up to 0.2 seconds. The trim is a function of the streak at the moment the item appears, so an error resets the streak and the next item gets the round's untrimmed window. The window never drops below 0.85 seconds.
+- The first item of every round gets a grace of 1 extra second on top of its window, so the cost of a rule switch is paid in reaction time rather than in a life. Play-testing showed the first item after a switch was the one most often lost to a timeout.
 - When the round clock expires, an item that is still on screen is cancelled without penalty and is not recorded.
 
 ### 3.3 Lives
@@ -149,11 +150,11 @@ Haptics are the primary reward channel and are on by default. The mapping lives 
 
 ### 5.2 Sound
 
-Sound is on by default but never required to play. The audio session uses the ambient category so it mixes with whatever the player is listening to and respects Silent Mode; this behaviour is verified on hardware in the first hardware pass. Sounds are short bundled files (the correct sound under 150 milliseconds, everything else 500 or under) played through an `AVAudioEngine` player node. watchOS has no time-pitch audio unit, so the correct sound ships as 13 pre-rendered variants, one per semitone from 0 to 12. Version 1 ships synthesised placeholder files generated by a script in `Tools/` so they can be replaced by designed assets without code changes; a designed correct sound must be supplied as the same 13 variants.
+Sound is on by default but never required to play. The audio session uses the ambient category so it mixes with whatever the player is listening to and respects Silent Mode; this behaviour is verified on hardware in the first hardware pass. Sounds are short bundled files (the correct sound under 150 milliseconds, everything else 500 or under) played through an `AVAudioEngine` player node. watchOS has no time-pitch audio unit, so the correct sound ships as 19 pre-rendered variants, one per semitone from 0 to 18. Version 1 ships synthesised placeholder files generated by a script in `Tools/` so they can be replaced by designed assets without code changes; a designed correct sound must be supplied as the same 19 variants.
 
 | Cue | Sound |
 |---|---|
-| correct(streak), streakMilestone(streak) | the correct sound variant for (streak minus 1) semitones, capped at 12 |
+| correct(streak), streakMilestone(streak) | the correct sound variant for (streak minus 1) divided by 2 semitones, capped at 18, so the pitch keeps climbing through a whole round of about 35 items |
 | wrong | low thud |
 | timedOut | whoosh |
 | roundStarted | ding |
@@ -180,7 +181,7 @@ Navigation is a `NavigationStack` rooted at Home. Play is presented as a full sc
 2. Round interstitial: round number, rule, edge mapping preview, lives, score, countdown ring. Tap to start now.
 3. Play: a thin round-clock bar along the top, lives and score in the top corners, the item in the centre with a shrinking ring, category labels at the active edges. A small pause button sits in a bottom corner, clear of the down-edge label, and also carries the Double Tap shortcut.
 4. Paused: Resume (Double Tap shortcut) and Quit run with a confirmation. Quit returns to Home.
-5. Results: score with a best-ever badge, accuracy, rounds completed, lives remaining, then error split, errors by rule, top confusion pairs, mean reaction time, switch cost. Buttons: Play again, Home. Play again keeps the mode: after a daily it replays the daily, after free play it starts a new random seed.
+5. Results: a headline saying why the run ended ("Run complete", "Out of lives in round 3", or "Incomplete run"), then the score with a best-ever badge, accuracy, rounds completed, lives remaining, then error split, errors by rule, top confusion pairs, mean reaction time, switch cost. Buttons: Play again, Home. Play again keeps the mode: after a daily it replays the daily, after free play it starts a new random seed.
 6. History: tiles for best score, runs played and daily streak; Swift Charts lines for score, mean reaction time and switch cost over the last 30 completed runs; sharpest time of day; a list of runs that opens the results view for that run.
 7. Settings: Sounds, Haptics, Tap to sort, Colour hints, Reset history (with confirmation), About.
 

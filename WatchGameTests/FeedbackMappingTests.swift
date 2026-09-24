@@ -19,8 +19,11 @@ import SwipeSortEngine
 
     @Test func soundTableAndPitch() {
         #expect(FeedbackCue.correct(streak: 1).sound == .correct(semitones: 0))
-        #expect(FeedbackCue.correct(streak: 7).sound == .correct(semitones: 6))
-        #expect(FeedbackCue.streakMilestone(streak: 20).sound == .correct(semitones: 12))
+        #expect(FeedbackCue.correct(streak: 2).sound == .correct(semitones: 0))
+        #expect(FeedbackCue.correct(streak: 7).sound == .correct(semitones: 3))
+        #expect(FeedbackCue.streakMilestone(streak: 20).sound == .correct(semitones: 9))
+        #expect(FeedbackCue.correct(streak: 37).sound == .correct(semitones: 18))
+        #expect(FeedbackCue.correct(streak: 60).sound == .correct(semitones: 18))
         #expect(FeedbackCue.wrong.sound == .wrong)
         #expect(FeedbackCue.timedOut.sound == .timeout)
         #expect(FeedbackCue.roundStarted.sound == .roundStart)
@@ -30,7 +33,7 @@ import SwipeSortEngine
     }
 
     @Test func everySoundAssetIsBundled() {
-        #expect(SoundAsset.allCases.count == 18)
+        #expect(SoundAsset.allCases.count == 24)
         for asset in SoundAsset.allCases {
             #expect(Bundle.main.url(forResource: asset.fileName, withExtension: "wav") != nil, "missing \(asset.fileName).wav")
         }

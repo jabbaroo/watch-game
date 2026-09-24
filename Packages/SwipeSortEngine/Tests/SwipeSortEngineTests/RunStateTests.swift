@@ -17,14 +17,22 @@ import Testing
         let produced = h.send(.startRound, after: .seconds(1))
         let active = try #require(h.activeItem)
         #expect(active.index == 0)
-        #expect(active.window == .seconds(2))
+        #expect(active.window == .seconds(3), "first item of a round carries the 1 s grace")
         #expect(active.shownAt == .seconds(1))
-        #expect(active.deadline == .seconds(3))
+        #expect(active.deadline == .seconds(4))
         #expect(active.expectedEdge == h.state.currentPlan.mapping.edge(for: active.expectedCategoryID))
         #expect(produced.contains(.roundStarted(h.state.plans[0])))
         #expect(h.contains(.roundStarted, in: produced))
         #expect(produced.contains(.itemShown(active)))
-        #expect(produced.contains(.wake(at: .seconds(3))))
+        #expect(produced.contains(.wake(at: .seconds(4))))
+    }
+
+    @Test func secondItemUsesTheRoundWindowWithoutGrace() {
+        var h = RunHarness()
+        h.startRunAndRound()
+        h.answerCorrectly()
+        #expect(h.activeItem?.index == 1)
+        #expect(h.activeItem?.window == .seconds(2))
     }
 
     @Test func correctAnswerScoresAndMovesToGap() {
@@ -32,12 +40,12 @@ import Testing
         h.startRunAndRound()
         let active = h.activeItem!
         let produced = h.send(.answer(active.expectedEdge), after: .milliseconds(500))
-        // 100 x 1 + speed bonus 50 x (1.5 / 2.0) = 137.5, rounded to 138
-        #expect(h.state.score == 138)
+        // First item window is 3.0 s (2.0 s plus grace): 100 x 1 + 50 x (2.5 / 3.0) = 141.7, rounded to 142
+        #expect(h.state.score == 142)
         #expect(h.state.streak == 1)
         #expect(h.state.lives == 3)
         #expect(h.state.phase == .betweenItems(nextItemAt: .milliseconds(750)))
-        #expect(produced.contains(.scoreChanged(138)))
+        #expect(produced.contains(.scoreChanged(142)))
         #expect(h.contains(.correct(streak: 1), in: produced))
         #expect(produced.contains(.wake(at: .milliseconds(750))))
         guard case .itemResolved(let result, let outcome) = produced[0] else {
@@ -45,10 +53,10 @@ import Testing
             return
         }
         #expect(result.correct)
-        #expect(result.points == 138)
+        #expect(result.points == 142)
         #expect(result.reaction == .milliseconds(500))
         #expect(result.answeredCategoryID == active.expectedCategoryID)
-        #expect(outcome == .correct(points: 138, streak: 1))
+        #expect(outcome == .correct(points: 142, streak: 1))
     }
 
     @Test func wrongAnswerCostsALifeAndResetsStreak() {

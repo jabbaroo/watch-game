@@ -7,15 +7,15 @@ import Testing
         h.startRunAndRound()
         let before = h.activeItem!
         h.send(.pause, after: .milliseconds(500))
-        #expect(h.state.roundTimeRemaining(at: h.now) == .milliseconds(44_500))
-        #expect(h.state.roundTimeRemaining(at: h.now + .seconds(30)) == .milliseconds(44_500))
+        #expect(h.state.roundTimeRemaining(at: h.now) == .milliseconds(39_500))
+        #expect(h.state.roundTimeRemaining(at: h.now + .seconds(30)) == .milliseconds(39_500))
         let produced = h.send(.resume, after: .seconds(10))
         let after = try #require(h.activeItem)
         #expect(after.index == before.index)
         #expect(after.item == before.item)
         #expect(after.deadline == before.deadline + .seconds(10))
         #expect(after.shownAt == before.shownAt + .seconds(10))
-        #expect(h.state.roundTimeRemaining(at: h.now) == .milliseconds(44_500))
+        #expect(h.state.roundTimeRemaining(at: h.now) == .milliseconds(39_500))
         #expect(produced.contains(.itemShown(after)))
         #expect(produced.contains(.wake(at: after.deadline)))
     }

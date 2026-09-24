@@ -6,29 +6,39 @@ import Testing
 
     @Test func standardValuesMatchSpec() {
         #expect(config.roundCount == 8)
-        #expect(config.roundDuration == .seconds(45))
+        #expect(config.roundDuration == .seconds(40))
+        #expect(config.baseWindows.count == 8)
+        #expect(config.firstItemGrace == .seconds(1))
         #expect(config.startingLives == 3)
         #expect(config.maximumLives == 3)
         #expect(config.categoryRamp == [2, 2, 3, 3, 4, 4, 4, 4])
     }
 
     @Test func windowFallsPerRound() {
-        #expect(config.itemWindow(roundIndex: 0, streak: 0) == .seconds(2))
-        #expect(config.itemWindow(roundIndex: 1, streak: 0) == .milliseconds(1850))
-        #expect(config.itemWindow(roundIndex: 7, streak: 0) == .milliseconds(950))
+        let expected = [2000, 1900, 1750, 1600, 1450, 1300, 1150, 1000]
+        for (round, milliseconds) in expected.enumerated() {
+            #expect(config.itemWindow(roundIndex: round, streak: 0) == .milliseconds(milliseconds), "round \(round)")
+        }
+        #expect(config.itemWindow(roundIndex: 9, streak: 0) == .seconds(1), "rounds past the table reuse the last window")
     }
 
     @Test func windowTrimsEveryFiveStreakUpToCap() {
         #expect(config.itemWindow(roundIndex: 0, streak: 4) == .seconds(2))
         #expect(config.itemWindow(roundIndex: 0, streak: 5) == .milliseconds(1950))
         #expect(config.itemWindow(roundIndex: 0, streak: 10) == .milliseconds(1900))
-        #expect(config.itemWindow(roundIndex: 0, streak: 30) == .milliseconds(1700))
-        #expect(config.itemWindow(roundIndex: 0, streak: 100) == .milliseconds(1700))
+        #expect(config.itemWindow(roundIndex: 0, streak: 20) == .milliseconds(1800))
+        #expect(config.itemWindow(roundIndex: 0, streak: 100) == .milliseconds(1800))
     }
 
     @Test func windowNeverDropsBelowFloor() {
-        #expect(config.itemWindow(roundIndex: 7, streak: 30) == .milliseconds(800))
-        #expect(config.itemWindow(roundIndex: 20, streak: 0) == .milliseconds(800))
+        #expect(config.itemWindow(roundIndex: 7, streak: 30) == .milliseconds(850))
+        #expect(config.itemWindow(roundIndex: 7, streak: 0) == .seconds(1))
+    }
+
+    @Test func firstItemOfARoundGetsGrace() {
+        #expect(config.itemWindow(roundIndex: 0, streak: 0, isFirstItem: true) == .seconds(3))
+        #expect(config.itemWindow(roundIndex: 7, streak: 0, isFirstItem: true) == .seconds(2))
+        #expect(config.itemWindow(roundIndex: 0, streak: 5, isFirstItem: true) == .milliseconds(2950))
     }
 
     @Test func categoryCountFollowsRampAndRepeatsLastValue() {

@@ -156,7 +156,7 @@ public struct RunState: Sendable, Equatable {
         guard let edge = currentPlan.mapping.edge(for: draw.categoryID) else {
             preconditionFailure("The planner maps every active category to an edge")
         }
-        let window = configuration.itemWindow(roundIndex: roundIndex, streak: streak)
+        let window = configuration.itemWindow(roundIndex: roundIndex, streak: streak, isFirstItem: nextItemIndex == 0)
         let active = ActiveItem(
             index: nextItemIndex,
             item: draw.item,

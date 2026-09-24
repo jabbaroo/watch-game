@@ -3,7 +3,7 @@ import OSLog
 import SwipeSortEngine
 
 /// Every bundled sound. watchOS has no time-pitch audio unit, so the correct sound
-/// ships as 13 pre-rendered variants, one per semitone from 0 to 12.
+/// ships as 19 pre-rendered variants, one per semitone from 0 to 18.
 enum SoundAsset: Hashable, Sendable {
     case correct(semitones: Int)
     case wrong
@@ -12,7 +12,7 @@ enum SoundAsset: Hashable, Sendable {
     case perfect
     case runEnd
 
-    static let maximumSemitones = 12
+    static let maximumSemitones = 18
 
     static var allCases: [SoundAsset] {
         (0...maximumSemitones).map { .correct(semitones: $0) } + [.wrong, .timeout, .roundStart, .perfect, .runEnd]
@@ -31,12 +31,12 @@ enum SoundAsset: Hashable, Sendable {
 }
 
 extension FeedbackCue {
-    /// The sound a cue plays (spec 5.2). The correct sound rises one semitone per
-    /// streak step and is capped; the streak resets on any error, so the pitch does too.
+    /// The sound a cue plays (spec 5.2). The correct sound rises half a semitone per
+    /// correct answer, capped at an octave and a half; the streak resets on any error, so the pitch does too.
     var sound: SoundAsset? {
         switch self {
         case .correct(let streak), .streakMilestone(let streak):
-            .correct(semitones: min(max(streak - 1, 0), SoundAsset.maximumSemitones))
+            .correct(semitones: min(max(streak - 1, 0) / 2, SoundAsset.maximumSemitones))
         case .wrong: .wrong
         case .timedOut: .timeout
         case .roundStarted: .roundStart

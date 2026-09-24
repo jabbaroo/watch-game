@@ -576,29 +576,39 @@ import Testing
 
     @Test func standardValuesMatchSpec() {
         #expect(config.roundCount == 8)
-        #expect(config.roundDuration == .seconds(45))
+        #expect(config.roundDuration == .seconds(40))
+        #expect(config.baseWindows.count == 8)
+        #expect(config.firstItemGrace == .seconds(1))
         #expect(config.startingLives == 3)
         #expect(config.maximumLives == 3)
         #expect(config.categoryRamp == [2, 2, 3, 3, 4, 4, 4, 4])
     }
 
     @Test func windowFallsPerRound() {
-        #expect(config.itemWindow(roundIndex: 0, streak: 0) == .seconds(2))
-        #expect(config.itemWindow(roundIndex: 1, streak: 0) == .milliseconds(1850))
-        #expect(config.itemWindow(roundIndex: 7, streak: 0) == .milliseconds(950))
+        let expected = [2000, 1900, 1750, 1600, 1450, 1300, 1150, 1000]
+        for (round, milliseconds) in expected.enumerated() {
+            #expect(config.itemWindow(roundIndex: round, streak: 0) == .milliseconds(milliseconds), "round \(round)")
+        }
+        #expect(config.itemWindow(roundIndex: 9, streak: 0) == .seconds(1), "rounds past the table reuse the last window")
     }
 
     @Test func windowTrimsEveryFiveStreakUpToCap() {
         #expect(config.itemWindow(roundIndex: 0, streak: 4) == .seconds(2))
         #expect(config.itemWindow(roundIndex: 0, streak: 5) == .milliseconds(1950))
         #expect(config.itemWindow(roundIndex: 0, streak: 10) == .milliseconds(1900))
-        #expect(config.itemWindow(roundIndex: 0, streak: 30) == .milliseconds(1700))
-        #expect(config.itemWindow(roundIndex: 0, streak: 100) == .milliseconds(1700))
+        #expect(config.itemWindow(roundIndex: 0, streak: 20) == .milliseconds(1800))
+        #expect(config.itemWindow(roundIndex: 0, streak: 100) == .milliseconds(1800))
     }
 
     @Test func windowNeverDropsBelowFloor() {
-        #expect(config.itemWindow(roundIndex: 7, streak: 30) == .milliseconds(800))
-        #expect(config.itemWindow(roundIndex: 20, streak: 0) == .milliseconds(800))
+        #expect(config.itemWindow(roundIndex: 7, streak: 30) == .milliseconds(850))
+        #expect(config.itemWindow(roundIndex: 7, streak: 0) == .seconds(1))
+    }
+
+    @Test func firstItemOfARoundGetsGrace() {
+        #expect(config.itemWindow(roundIndex: 0, streak: 0, isFirstItem: true) == .seconds(3))
+        #expect(config.itemWindow(roundIndex: 7, streak: 0, isFirstItem: true) == .seconds(2))
+        #expect(config.itemWindow(roundIndex: 0, streak: 5, isFirstItem: true) == .milliseconds(2950))
     }
 
     @Test func categoryCountFollowsRampAndRepeatsLastValue() {
@@ -662,17 +672,22 @@ Expected: compile errors for `RunConfiguration` and `ScoringRules`.
 /// Every tunable number in the game. Change values here, not in the engine.
 public struct RunConfiguration: Sendable, Equatable {
     public var roundCount = 8
-    public var roundDuration: Duration = .seconds(45)
+    public var roundDuration: Duration = .seconds(40)
     public var interItemDelay: Duration = .milliseconds(250)
 
-    public var initialWindow: Duration = .seconds(2)
-    public var windowDecrementPerRound: Duration = .milliseconds(150)
+    /// Base item window per round, zero-based. Rounds past the end of the list reuse the last value.
+    public var baseWindows: [Duration] = [
+        .milliseconds(2000), .milliseconds(1900), .milliseconds(1750), .milliseconds(1600),
+        .milliseconds(1450), .milliseconds(1300), .milliseconds(1150), .milliseconds(1000),
+    ]
+    /// Extra time on the first item of every round, so a rule switch costs reaction time rather than a life.
+    public var firstItemGrace: Duration = .seconds(1)
     /// Every `streakStep` consecutive correct answers is a milestone: the window trims,
     /// the milestone haptic fires and (through `ScoringRules.multiplierStep`) the multiplier steps up.
     public var streakStep = 5
     public var streakTrimStep: Duration = .milliseconds(50)
-    public var maximumStreakTrim: Duration = .milliseconds(300)
-    public var minimumWindow: Duration = .milliseconds(800)
+    public var maximumStreakTrim: Duration = .milliseconds(200)
+    public var minimumWindow: Duration = .milliseconds(850)
 
     public var startingLives = 3
     public var maximumLives = 3
@@ -684,13 +699,21 @@ public struct RunConfiguration: Sendable, Equatable {
 
     public static let standard = RunConfiguration()
 
-    /// The time an item stays on screen. `roundIndex` is zero-based and
-    /// `streak` is the number of consecutive correct answers so far this round.
-    public func itemWindow(roundIndex: Int, streak: Int) -> Duration {
-        let base = initialWindow - windowDecrementPerRound * roundIndex
+    public func baseWindow(roundIndex: Int) -> Duration {
+        if baseWindows.indices.contains(roundIndex) {
+            return baseWindows[roundIndex]
+        }
+        return baseWindows.last ?? .seconds(2)
+    }
+
+    /// The time an item stays on screen. `roundIndex` is zero-based, `streak` is the
+    /// number of consecutive correct answers so far this round, and the first item of a
+    /// round gets `firstItemGrace` on top.
+    public func itemWindow(roundIndex: Int, streak: Int, isFirstItem: Bool = false) -> Duration {
         let trimSteps = streakStep > 0 ? streak / streakStep : 0
         let trim = min(streakTrimStep * trimSteps, maximumStreakTrim)
-        return max(base - trim, minimumWindow)
+        let window = max(baseWindow(roundIndex: roundIndex) - trim, minimumWindow)
+        return isFirstItem ? window + firstItemGrace : window
     }
 
     public func categoryCount(roundIndex: Int) -> Int {
@@ -1423,14 +1446,22 @@ import Testing
         let produced = h.send(.startRound, after: .seconds(1))
         let active = try #require(h.activeItem)
         #expect(active.index == 0)
-        #expect(active.window == .seconds(2))
+        #expect(active.window == .seconds(3), "first item of a round carries the 1 s grace")
         #expect(active.shownAt == .seconds(1))
-        #expect(active.deadline == .seconds(3))
+        #expect(active.deadline == .seconds(4))
         #expect(active.expectedEdge == h.state.currentPlan.mapping.edge(for: active.expectedCategoryID))
         #expect(produced.contains(.roundStarted(h.state.plans[0])))
         #expect(h.contains(.roundStarted, in: produced))
         #expect(produced.contains(.itemShown(active)))
-        #expect(produced.contains(.wake(at: .seconds(3))))
+        #expect(produced.contains(.wake(at: .seconds(4))))
+    }
+
+    @Test func secondItemUsesTheRoundWindowWithoutGrace() {
+        var h = RunHarness()
+        h.startRunAndRound()
+        h.answerCorrectly()
+        #expect(h.activeItem?.index == 1)
+        #expect(h.activeItem?.window == .seconds(2))
     }
 
     @Test func correctAnswerScoresAndMovesToGap() {
@@ -1438,12 +1469,12 @@ import Testing
         h.startRunAndRound()
         let active = h.activeItem!
         let produced = h.send(.answer(active.expectedEdge), after: .milliseconds(500))
-        // 100 x 1 + speed bonus 50 x (1.5 / 2.0) = 137.5, rounded to 138
-        #expect(h.state.score == 138)
+        // First item window is 3.0 s (2.0 s plus grace): 100 x 1 + 50 x (2.5 / 3.0) = 141.7, rounded to 142
+        #expect(h.state.score == 142)
         #expect(h.state.streak == 1)
         #expect(h.state.lives == 3)
         #expect(h.state.phase == .betweenItems(nextItemAt: .milliseconds(750)))
-        #expect(produced.contains(.scoreChanged(138)))
+        #expect(produced.contains(.scoreChanged(142)))
         #expect(h.contains(.correct(streak: 1), in: produced))
         #expect(produced.contains(.wake(at: .milliseconds(750))))
         guard case .itemResolved(let result, let outcome) = produced[0] else {
@@ -1451,10 +1482,10 @@ import Testing
             return
         }
         #expect(result.correct)
-        #expect(result.points == 138)
+        #expect(result.points == 142)
         #expect(result.reaction == .milliseconds(500))
         #expect(result.answeredCategoryID == active.expectedCategoryID)
-        #expect(outcome == .correct(points: 138, streak: 1))
+        #expect(outcome == .correct(points: 142, streak: 1))
     }
 
     @Test func wrongAnswerCostsALifeAndResetsStreak() {
@@ -1858,7 +1889,7 @@ public struct RunState: Sendable, Equatable {
         guard let edge = currentPlan.mapping.edge(for: draw.categoryID) else {
             preconditionFailure("The planner maps every active category to an edge")
         }
-        let window = configuration.itemWindow(roundIndex: roundIndex, streak: streak)
+        let window = configuration.itemWindow(roundIndex: roundIndex, streak: streak, isFirstItem: nextItemIndex == 0)
         let active = ActiveItem(
             index: nextItemIndex,
             item: draw.item,
@@ -2034,15 +2065,15 @@ import Testing
         h.startRunAndRound()
         let before = h.activeItem!
         h.send(.pause, after: .milliseconds(500))
-        #expect(h.state.roundTimeRemaining(at: h.now) == .milliseconds(44_500))
-        #expect(h.state.roundTimeRemaining(at: h.now + .seconds(30)) == .milliseconds(44_500))
+        #expect(h.state.roundTimeRemaining(at: h.now) == .milliseconds(39_500))
+        #expect(h.state.roundTimeRemaining(at: h.now + .seconds(30)) == .milliseconds(39_500))
         let produced = h.send(.resume, after: .seconds(10))
         let after = try #require(h.activeItem)
         #expect(after.index == before.index)
         #expect(after.item == before.item)
         #expect(after.deadline == before.deadline + .seconds(10))
         #expect(after.shownAt == before.shownAt + .seconds(10))
-        #expect(h.state.roundTimeRemaining(at: h.now) == .milliseconds(44_500))
+        #expect(h.state.roundTimeRemaining(at: h.now) == .milliseconds(39_500))
         #expect(produced.contains(.itemShown(after)))
         #expect(produced.contains(.wake(at: after.deadline)))
     }
@@ -4076,8 +4107,11 @@ import SwipeSortEngine
 
     @Test func soundTableAndPitch() {
         #expect(FeedbackCue.correct(streak: 1).sound == .correct(semitones: 0))
-        #expect(FeedbackCue.correct(streak: 7).sound == .correct(semitones: 6))
-        #expect(FeedbackCue.streakMilestone(streak: 20).sound == .correct(semitones: 12))
+        #expect(FeedbackCue.correct(streak: 2).sound == .correct(semitones: 0))
+        #expect(FeedbackCue.correct(streak: 7).sound == .correct(semitones: 3))
+        #expect(FeedbackCue.streakMilestone(streak: 20).sound == .correct(semitones: 9))
+        #expect(FeedbackCue.correct(streak: 37).sound == .correct(semitones: 18))
+        #expect(FeedbackCue.correct(streak: 60).sound == .correct(semitones: 18))
         #expect(FeedbackCue.wrong.sound == .wrong)
         #expect(FeedbackCue.timedOut.sound == .timeout)
         #expect(FeedbackCue.roundStarted.sound == .roundStart)
@@ -4087,7 +4121,7 @@ import SwipeSortEngine
     }
 
     @Test func everySoundAssetIsBundled() {
-        #expect(SoundAsset.allCases.count == 18)
+        #expect(SoundAsset.allCases.count == 24)
         for asset in SoundAsset.allCases {
             #expect(Bundle.main.url(forResource: asset.fileName, withExtension: "wav") != nil, "missing \(asset.fileName).wav")
         }
@@ -4158,7 +4192,7 @@ import OSLog
 import SwipeSortEngine
 
 /// Every bundled sound. watchOS has no time-pitch audio unit, so the correct sound
-/// ships as 13 pre-rendered variants, one per semitone from 0 to 12.
+/// ships as 19 pre-rendered variants, one per semitone from 0 to 18.
 enum SoundAsset: Hashable, Sendable {
     case correct(semitones: Int)
     case wrong
@@ -4167,7 +4201,7 @@ enum SoundAsset: Hashable, Sendable {
     case perfect
     case runEnd
 
-    static let maximumSemitones = 12
+    static let maximumSemitones = 18
 
     static var allCases: [SoundAsset] {
         (0...maximumSemitones).map { .correct(semitones: $0) } + [.wrong, .timeout, .roundStart, .perfect, .runEnd]
@@ -4186,12 +4220,12 @@ enum SoundAsset: Hashable, Sendable {
 }
 
 extension FeedbackCue {
-    /// The sound a cue plays (spec 5.2). The correct sound rises one semitone per
-    /// streak step and is capped; the streak resets on any error, so the pitch does too.
+    /// The sound a cue plays (spec 5.2). The correct sound rises half a semitone per
+    /// correct answer, capped at an octave and a half; the streak resets on any error, so the pitch does too.
     var sound: SoundAsset? {
         switch self {
         case .correct(let streak), .streakMilestone(let streak):
-            .correct(semitones: min(max(streak - 1, 0), SoundAsset.maximumSemitones))
+            .correct(semitones: min(max(streak - 1, 0) / 2, SoundAsset.maximumSemitones))
         case .wrong: .wrong
         case .timedOut: .timeout
         case .roundStarted: .roundStart
@@ -4343,7 +4377,7 @@ SOUNDS = {
 }
 
 # watchOS has no time-pitch unit, so the correct sound is rendered once per semitone.
-for semitones in range(13):
+for semitones in range(19):
     SOUNDS[f"correct-{semitones:02d}"] = tone(880 * 2 ** (semitones / 12), 110, harmonics=(1.0, 0.3))
 
 if __name__ == "__main__":
@@ -4352,7 +4386,7 @@ if __name__ == "__main__":
 ```
 
 Run: `python3 Tools/generate_sounds.py`
-Expected: eighteen `wrote WatchGame/Resources/Sounds/<name>.wav` lines: the thirteen `correct-NN` variants at 110 ms, `wrong` 180 ms, `timeout` 220 ms, `roundStart` 260 ms, `perfect` 440 ms and `runEnd` 480 ms. watchOS has no `AVAudioUnitTimePitch`, which is why the correct sound is rendered once per semitone rather than pitch-shifted at runtime.
+Expected: twenty-four `wrote WatchGame/Resources/Sounds/<name>.wav` lines: the nineteen `correct-NN` variants at 110 ms, `wrong` 180 ms, `timeout` 220 ms, `roundStart` 260 ms, `perfect` 440 ms and `runEnd` 480 ms (the correct sound is rendered for semitones 0 to 18). watchOS has no `AVAudioUnitTimePitch`, which is why the correct sound is rendered once per semitone rather than pitch-shifted at runtime.
 
 - [x] **Step 6: Run the tests to verify they pass**
 
@@ -4438,7 +4472,7 @@ import SwipeSortEngine
         let (session, _, haptics) = try makeSession()
         session.start()
         session.startRound()
-        try await Task.sleep(for: .milliseconds(2600))
+        try await Task.sleep(for: .milliseconds(3600))
         #expect(session.lives == 2)
         #expect(haptics.cues.contains(.timedOut))
     }
@@ -5891,6 +5925,9 @@ struct ResultsView: View {
         List {
             Section {
                 VStack(spacing: 4) {
+                    headline
+                        .font(.headline)
+                        .multilineTextAlignment(.center)
                     if data.isDaily {
                         Text("Daily challenge")
                             .font(.caption2)
@@ -5934,6 +5971,19 @@ struct ResultsView: View {
             }
         }
         .navigationTitle(onHome == nil ? Text("Run") : Text("Results"))
+    }
+
+    /// Why the run ended, so an early ending reads as the game's verdict.
+    @ViewBuilder
+    private var headline: some View {
+        switch data.summary.endReason {
+        case .completedAllRounds:
+            Text("Run complete")
+        case .outOfLives:
+            Text("Out of lives in round \(max(data.summary.rounds.count, 1))")
+        case .quit, .abandoned:
+            Text("Incomplete run")
+        }
     }
 
     private func stat(_ title: LocalizedStringKey, _ value: String) -> some View {

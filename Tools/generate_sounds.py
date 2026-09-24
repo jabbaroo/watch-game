@@ -62,7 +62,7 @@ SOUNDS = {
 }
 
 # watchOS has no time-pitch unit, so the correct sound is rendered once per semitone.
-for semitones in range(13):
+for semitones in range(19):
     SOUNDS[f"correct-{semitones:02d}"] = tone(880 * 2 ** (semitones / 12), 110, harmonics=(1.0, 0.3))
 
 if __name__ == "__main__":

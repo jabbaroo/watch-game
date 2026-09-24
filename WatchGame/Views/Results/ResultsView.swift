@@ -20,6 +20,9 @@ struct ResultsView: View {
         List {
             Section {
                 VStack(spacing: 4) {
+                    headline
+                        .font(.headline)
+                        .multilineTextAlignment(.center)
                     if data.isDaily {
                         Text("Daily challenge")
                             .font(.caption2)
@@ -63,6 +66,19 @@ struct ResultsView: View {
             }
         }
         .navigationTitle(onHome == nil ? Text("Run") : Text("Results"))
+    }
+
+    /// Why the run ended, so an early ending reads as the game's verdict.
+    @ViewBuilder
+    private var headline: some View {
+        switch data.summary.endReason {
+        case .completedAllRounds:
+            Text("Run complete")
+        case .outOfLives:
+            Text("Out of lives in round \(max(data.summary.rounds.count, 1))")
+        case .quit, .abandoned:
+            Text("Incomplete run")
+        }
     }
 
     private func stat(_ title: LocalizedStringKey, _ value: String) -> some View {
