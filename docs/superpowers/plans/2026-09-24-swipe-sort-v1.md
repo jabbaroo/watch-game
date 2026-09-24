@@ -95,7 +95,7 @@ WatchGame/                                    repo root
 - Create: `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/SeededGeneratorTests.swift`
 - Create: `Scripts/engine-test.sh`
 
-- [ ] **Step 1: Create the package manifest**
+- [x] **Step 1: Create the package manifest**
 
 `Packages/SwipeSortEngine/Package.swift`:
 
@@ -117,7 +117,7 @@ let package = Package(
 )
 ```
 
-- [ ] **Step 2: Create the engine test script**
+- [x] **Step 2: Create the engine test script**
 
 `Scripts/engine-test.sh`:
 
@@ -131,7 +131,7 @@ swift test --package-path Packages/SwipeSortEngine "$@"
 
 Run `chmod +x Scripts/engine-test.sh`.
 
-- [ ] **Step 3: Write the failing test**
+- [x] **Step 3: Write the failing test**
 
 `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/SeededGeneratorTests.swift`:
 
@@ -163,12 +163,12 @@ import Testing
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it fails**
+- [x] **Step 4: Run the test to verify it fails**
 
 Run: `Scripts/engine-test.sh`
 Expected: SwiftPM fails before compiling anything with `target 'SwipeSortEngine' referenced in product 'SwipeSortEngine' is empty`, because the source folder has no files yet.
 
-- [ ] **Step 5: Implement the generator (SplitMix64)**
+- [x] **Step 5: Implement the generator (SplitMix64)**
 
 `Packages/SwipeSortEngine/Sources/SwipeSortEngine/SeededGenerator.swift`:
 
@@ -192,12 +192,12 @@ public struct SeededGenerator: RandomNumberGenerator, Sendable, Equatable {
 }
 ```
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [x] **Step 6: Run the tests to verify they pass**
 
 Run: `Scripts/engine-test.sh`
 Expected: a line like `Test run with 3 tests in 1 suite passed`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add Packages Scripts
@@ -211,7 +211,7 @@ git commit -m "feat(engine): add SwipeSortEngine package with seeded generator"
 - Create: `Packages/SwipeSortEngine/Sources/SwipeSortEngine/BuiltInPacks.swift`
 - Create: `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/ContentPackTests.swift`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/ContentPackTests.swift`:
 
@@ -319,12 +319,12 @@ import Testing
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `Scripts/engine-test.sh`
 Expected: compile errors about `ContentPack`, `Visual`, `CategoryValue`.
 
-- [ ] **Step 3: Implement the model**
+- [x] **Step 3: Implement the model**
 
 `Packages/SwipeSortEngine/Sources/SwipeSortEngine/ContentPack.swift`:
 
@@ -543,12 +543,12 @@ public extension ContentPack {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `Scripts/engine-test.sh`
 Expected: all ContentPack tests pass (8 tests) plus the 3 generator tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Packages
@@ -563,7 +563,7 @@ git commit -m "feat(engine): content pack model, JSON coding, validation and bui
 - Create: `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/RunConfigurationTests.swift`
 - Create: `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/ScoringRulesTests.swift`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/RunConfigurationTests.swift`:
 
@@ -649,12 +649,12 @@ import Testing
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `Scripts/engine-test.sh`
 Expected: compile errors for `RunConfiguration` and `ScoringRules`.
 
-- [ ] **Step 3: Implement configuration and scoring**
+- [x] **Step 3: Implement configuration and scoring**
 
 `Packages/SwipeSortEngine/Sources/SwipeSortEngine/RunConfiguration.swift`:
 
@@ -735,12 +735,12 @@ public struct ScoringRules: Sendable, Equatable {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `Scripts/engine-test.sh`
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Packages
@@ -754,7 +754,7 @@ git commit -m "feat(engine): run configuration with window schedule and scoring 
 - Create: `Packages/SwipeSortEngine/Sources/SwipeSortEngine/RoundPlanner.swift`
 - Create: `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/RoundPlannerTests.swift`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/RoundPlannerTests.swift`:
 
@@ -833,12 +833,12 @@ import Testing
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `Scripts/engine-test.sh`
 Expected: compile errors for `SwipeEdge`, `EdgeMapping`, `RoundPlan`, `RoundPlanner`.
 
-- [ ] **Step 3: Implement edges and the planner**
+- [x] **Step 3: Implement edges and the planner**
 
 `Packages/SwipeSortEngine/Sources/SwipeSortEngine/SwipeEdge.swift`:
 
@@ -926,12 +926,12 @@ public enum RoundPlanner {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `Scripts/engine-test.sh`
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Packages
@@ -944,7 +944,7 @@ git commit -m "feat(engine): edges, edge mapping and deterministic round planner
 - Create: `Packages/SwipeSortEngine/Sources/SwipeSortEngine/ItemSequencer.swift`
 - Create: `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/ItemSequencerTests.swift`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/ItemSequencerTests.swift`:
 
@@ -1016,12 +1016,12 @@ import Testing
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `Scripts/engine-test.sh`
 Expected: compile error for `ItemSequencer`.
 
-- [ ] **Step 3: Implement the sequencer**
+- [x] **Step 3: Implement the sequencer**
 
 `Packages/SwipeSortEngine/Sources/SwipeSortEngine/ItemSequencer.swift`:
 
@@ -1072,12 +1072,12 @@ public struct ItemSequencer: Sendable, Equatable {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `Scripts/engine-test.sh`
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Packages
@@ -1093,7 +1093,7 @@ git commit -m "feat(engine): self-seeded item sequencer with anti-run rule"
 - Create: `Packages/SwipeSortEngine/Sources/SwipeSortEngine/RunEvents.swift`
 - Create: `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/ResultsTests.swift`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/ResultsTests.swift`:
 
@@ -1136,12 +1136,12 @@ import Testing
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `Scripts/engine-test.sh`
 Expected: compile errors for `RoundResult`, `RunSummary`, `ItemResult`.
 
-- [ ] **Step 3: Implement the result and event types**
+- [x] **Step 3: Implement the result and event types**
 
 `Packages/SwipeSortEngine/Sources/SwipeSortEngine/Results.swift`:
 
@@ -1313,12 +1313,12 @@ public enum RunEffect: Sendable, Equatable {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `Scripts/engine-test.sh`
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Packages
@@ -1332,7 +1332,7 @@ git commit -m "feat(engine): result, event, effect and phase types"
 - Create: `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/RunHarness.swift`
 - Create: `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/RunStateTests.swift`
 
-- [ ] **Step 1: Write the test harness and the failing tests**
+- [x] **Step 1: Write the test harness and the failing tests**
 
 `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/RunHarness.swift`:
 
@@ -1690,12 +1690,12 @@ import Testing
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `Scripts/engine-test.sh`
 Expected: compile errors for `RunState`.
 
-- [ ] **Step 3: Implement RunState**
+- [x] **Step 3: Implement RunState**
 
 `Packages/SwipeSortEngine/Sources/SwipeSortEngine/RunState.swift`:
 
@@ -2000,12 +2000,12 @@ public struct RunState: Sendable, Equatable {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `Scripts/engine-test.sh`
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Packages
@@ -2020,7 +2020,7 @@ git commit -m "feat(engine): run state machine with items, lives, scoring and ro
 - Modify: `Packages/SwipeSortEngine/Sources/SwipeSortEngine/RunState.swift` (only if a test fails; the Task 7 implementation already contains pause, resume and quit)
 - Create: `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/RunStatePauseTests.swift`
 
-- [ ] **Step 1: Write the tests**
+- [x] **Step 1: Write the tests**
 
 `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/RunStatePauseTests.swift`:
 
@@ -2133,12 +2133,12 @@ import Testing
 }
 ```
 
-- [ ] **Step 2: Run the tests**
+- [x] **Step 2: Run the tests**
 
 Run: `Scripts/engine-test.sh`
 Expected: all pass. If any fails, fix `RunState.apply` for the failing case and re-run; do not change the tests.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add Packages
@@ -2153,7 +2153,7 @@ git commit -m "test(engine): pause, resume and quit behaviour"
 - Create: `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/RunStatisticsTests.swift`
 - Create: `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/DailySeedTests.swift`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/RunStatisticsTests.swift`:
 
@@ -2305,12 +2305,12 @@ import Testing
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `Scripts/engine-test.sh`
 Expected: compile errors for `RunStatistics`, `DimensionErrorRate`, `ConfusionPair`, `DailySeed`.
 
-- [ ] **Step 3: Implement statistics and the daily seed**
+- [x] **Step 3: Implement statistics and the daily seed**
 
 `Packages/SwipeSortEngine/Sources/SwipeSortEngine/RunStatistics.swift`:
 
@@ -2451,12 +2451,12 @@ public enum DailySeed {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `Scripts/engine-test.sh`
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Packages
@@ -2483,7 +2483,7 @@ The project is written by hand in the Xcode 16+ format with file system synchron
 - Create: `Scripts/build.sh`
 - Create: `Scripts/test.sh`
 
-- [ ] **Step 1: Create the project file**
+- [x] **Step 1: Create the project file**
 
 `WatchGame.xcodeproj/project.pbxproj`:
 
@@ -3077,7 +3077,7 @@ The project is written by hand in the Xcode 16+ format with file system synchron
 }
 ```
 
-- [ ] **Step 2: Create the shared scheme**
+- [x] **Step 2: Create the shared scheme**
 
 `WatchGame.xcodeproj/xcshareddata/xcschemes/WatchGame.xcscheme`:
 
@@ -3172,7 +3172,7 @@ The project is written by hand in the Xcode 16+ format with file system synchron
 </Scheme>
 ```
 
-- [ ] **Step 3: Create the app skeleton**
+- [x] **Step 3: Create the app skeleton**
 
 `WatchGame/WatchGameApp.swift`:
 
@@ -3366,7 +3366,7 @@ echo "TESTS OK"
 
 Run `chmod +x Scripts/build.sh Scripts/test.sh`.
 
-- [ ] **Step 5: Build for the simulator**
+- [x] **Step 5: Build for the simulator**
 
 Run: `Scripts/build.sh`
 Expected: `BUILD OK`. If xcodebuild reports the project cannot be opened, the pbxproj has a syntax slip: run `plutil -lint WatchGame.xcodeproj/project.pbxproj` to locate it. If it reports a missing package product, check `relativePath = Packages/SwipeSortEngine` matches the folder.
@@ -3376,7 +3376,7 @@ Expected: `BUILD OK`. If xcodebuild reports the project cannot be opened, the pb
 Run: `Scripts/test.sh`
 Expected: `TESTS OK` with 1 test passing. The first run boots the simulator and takes a couple of minutes.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add WatchGame.xcodeproj WatchGame WatchGameTests Scripts
@@ -3394,7 +3394,7 @@ git commit -m "feat(app): watchOS app scaffold with container target, tests and 
 - Create: `WatchGameTests/Fixtures/broken.pack.json`
 - Create: `WatchGameTests/Fixtures/valid.pack.json`
 
-- [ ] **Step 1: Write the fixtures and the failing tests**
+- [x] **Step 1: Write the fixtures and the failing tests**
 
 `WatchGameTests/Fixtures/valid.pack.json`:
 
@@ -3498,7 +3498,7 @@ private final class TestBundleMarker {}
 Run: `Scripts/test.sh`
 Expected: compile errors for `PackLoader` and `Localization`.
 
-- [ ] **Step 3: Implement the loader and the localisation helper**
+- [x] **Step 3: Implement the loader and the localisation helper**
 
 `WatchGame/Game/Localization.swift`:
 
@@ -3574,7 +3574,7 @@ enum PackLoader {
 }
 ```
 
-- [ ] **Step 4: Add the built-in pack's strings to the String Catalog**
+- [x] **Step 4: Add the built-in pack's strings to the String Catalog**
 
 Replace `WatchGame/Localizable.xcstrings` with:
 
@@ -3607,7 +3607,7 @@ Replace `WatchGame/Localizable.xcstrings` with:
 Run: `Scripts/test.sh`
 Expected: `TESTS OK`. If `loaderSkipsInvalidPacksAndKeepsValidOnes` finds no fixtures, confirm the `Fixtures` folder sits under `WatchGameTests/` so the synchronized group copies the JSON files into the test bundle.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add WatchGame WatchGameTests
@@ -3621,7 +3621,7 @@ git commit -m "feat(app): pack loader with validation and localisation helper"
 - Create: `WatchGame/Persistence/HistoryStore.swift`
 - Create: `WatchGameTests/HistoryStoreTests.swift`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `WatchGameTests/HistoryStoreTests.swift`:
 
@@ -3735,7 +3735,7 @@ import SwipeSortEngine
 Run: `Scripts/test.sh`
 Expected: compile errors for `RunEntry`, `HistoryStore`.
 
-- [ ] **Step 3: Implement the models**
+- [x] **Step 3: Implement the models**
 
 `WatchGame/Persistence/HistoryModels.swift`:
 
@@ -3870,7 +3870,7 @@ final class ItemEntry {
 }
 ```
 
-- [ ] **Step 4: Implement the store**
+- [x] **Step 4: Implement the store**
 
 `WatchGame/Persistence/HistoryStore.swift`:
 
@@ -4025,7 +4025,7 @@ final class HistoryStore {
 Run: `Scripts/test.sh`
 Expected: `TESTS OK`. If `#Predicate` on `endedAt == nil` fails to compile, write it as `$0.endedAt == nil` inside the macro exactly as shown; SwiftData supports optional comparisons to nil.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add WatchGame WatchGameTests
@@ -4041,7 +4041,7 @@ git commit -m "feat(app): SwiftData history models and store"
 - Create: `WatchGame/Resources/Sounds/correct-00.wav` to `correct-12.wav`, `wrong.wav`, `timeout.wav`, `roundStart.wav`, `perfect.wav`, `runEnd.wav` (generated)
 - Create: `WatchGameTests/FeedbackMappingTests.swift`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `WatchGameTests/FeedbackMappingTests.swift`:
 
@@ -4091,7 +4091,7 @@ import SwipeSortEngine
 Run: `Scripts/test.sh`
 Expected: compile errors for `hapticType`, `SoundCue`, `SoundAsset`.
 
-- [ ] **Step 3: Implement haptics**
+- [x] **Step 3: Implement haptics**
 
 `WatchGame/Feedback/HapticsService.swift`:
 
@@ -4139,7 +4139,7 @@ final class SilentHaptics: HapticsService {
 }
 ```
 
-- [ ] **Step 4: Implement sound**
+- [x] **Step 4: Implement sound**
 
 `WatchGame/Feedback/SoundService.swift`:
 
@@ -4265,7 +4265,7 @@ final class EngineSound: SoundService {
 }
 ```
 
-- [ ] **Step 5: Write the sound generator and generate the files**
+- [x] **Step 5: Write the sound generator and generate the files**
 
 `Tools/generate_sounds.py`:
 
@@ -4350,7 +4350,7 @@ Expected: eighteen `wrote WatchGame/Resources/Sounds/<name>.wav` lines: the thir
 Run: `Scripts/test.sh`
 Expected: `TESTS OK`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add WatchGame WatchGameTests Tools
@@ -4368,7 +4368,7 @@ git commit -m "feat(app): haptic and sound services with generated placeholder s
 - Create: `WatchGameTests/GameSessionTests.swift`
 - Modify: `WatchGame/WatchGameApp.swift`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `WatchGameTests/GameSessionTests.swift`:
 
@@ -4486,7 +4486,7 @@ final class RecordingHaptics: HapticsService {
 Run: `Scripts/test.sh`
 Expected: compile errors for `GameSession`.
 
-- [ ] **Step 3: Implement settings keys and the environment**
+- [x] **Step 3: Implement settings keys and the environment**
 
 `WatchGame/Views/Settings/AppSettings.swift`:
 
@@ -4615,7 +4615,7 @@ extension AppEnvironment {
 }
 ```
 
-- [ ] **Step 4: Implement the session**
+- [x] **Step 4: Implement the session**
 
 `WatchGame/Game/GameSession.swift`:
 
@@ -4802,7 +4802,7 @@ final class GameSession {
 }
 ```
 
-- [ ] **Step 5: Wire the environment into the app**
+- [x] **Step 5: Wire the environment into the app**
 
 Replace `WatchGame/WatchGameApp.swift` with:
 
@@ -4855,7 +4855,7 @@ struct HomeView: View {
 Run: `Scripts/test.sh`
 Expected: `TESTS OK`. The two sleeping tests take about three seconds together.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add WatchGame WatchGameTests
@@ -4870,7 +4870,7 @@ git commit -m "feat(app): game session driving the engine with a continuous cloc
 - Create: `WatchGame/Views/Play/EdgeLabelsView.swift`
 - Create: `WatchGameTests/SwipeClassifierTests.swift`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `WatchGameTests/SwipeClassifierTests.swift`:
 
@@ -4922,7 +4922,7 @@ import SwipeSortEngine
 Run: `Scripts/test.sh`
 Expected: compile error for `SwipeClassifier`.
 
-- [ ] **Step 3: Implement the classifier**
+- [x] **Step 3: Implement the classifier**
 
 `WatchGame/Views/Play/SwipeClassifier.swift`:
 
@@ -4961,7 +4961,7 @@ struct SwipeClassifier {
 }
 ```
 
-- [ ] **Step 4: Implement item rendering**
+- [x] **Step 4: Implement item rendering**
 
 `WatchGame/Views/Play/ItemView.swift`:
 
@@ -5065,7 +5065,7 @@ extension Color {
 }
 ```
 
-- [ ] **Step 5: Implement the edge labels**
+- [x] **Step 5: Implement the edge labels**
 
 `WatchGame/Views/Play/EdgeLabelsView.swift`:
 
@@ -5134,7 +5134,7 @@ struct EdgeLabelsView: View {
 Run: `Scripts/test.sh`
 Expected: `TESTS OK`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add WatchGame WatchGameTests
@@ -5152,7 +5152,7 @@ git commit -m "feat(app): swipe classifier, item rendering and edge labels"
 - Create: `WatchGame/Views/Play/ConfettiView.swift`
 - Create: `WatchGame/Views/Play/RunView.swift`
 
-- [ ] **Step 1: Implement the confetti burst**
+- [x] **Step 1: Implement the confetti burst**
 
 `WatchGame/Views/Play/ConfettiView.swift`:
 
@@ -5198,7 +5198,7 @@ struct ConfettiView: View {
 }
 ```
 
-- [ ] **Step 2: Implement the round intro**
+- [x] **Step 2: Implement the round intro**
 
 `WatchGame/Views/Play/RoundIntroView.swift`:
 
@@ -5298,7 +5298,7 @@ struct LivesView: View {
 }
 ```
 
-- [ ] **Step 3: Implement the paused screen**
+- [x] **Step 3: Implement the paused screen**
 
 `WatchGame/Views/Play/PausedView.swift`:
 
@@ -5343,7 +5343,7 @@ struct PausedView: View {
 }
 ```
 
-- [ ] **Step 4: Implement the play screen**
+- [x] **Step 4: Implement the play screen**
 
 `WatchGame/Views/Play/PlayView.swift`:
 
@@ -5604,7 +5604,7 @@ private struct OutcomeModifier: ViewModifier, Animatable {
 }
 ```
 
-- [ ] **Step 5: Implement the run container**
+- [x] **Step 5: Implement the run container**
 
 `WatchGame/Views/Play/RunView.swift`:
 
@@ -5686,7 +5686,7 @@ struct ResultsView: View {
 }
 ```
 
-- [ ] **Step 6: Build**
+- [x] **Step 6: Build**
 
 Run: `Scripts/build.sh`
 Expected: `BUILD OK`.
@@ -5696,7 +5696,7 @@ Expected: `BUILD OK`.
 Run: `Scripts/test.sh`
 Expected: `TESTS OK`.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add WatchGame
@@ -5712,7 +5712,7 @@ git commit -m "feat(app): play screen with swipe input, round intro, pause and o
 - Create: `WatchGame/Game/DurationFormatting.swift`
 - Create: `WatchGameTests/DurationFormattingTests.swift`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `WatchGameTests/DurationFormattingTests.swift`:
 
@@ -5739,7 +5739,7 @@ import Testing
 Run: `Scripts/test.sh`
 Expected: compile error, `secondsText` not found.
 
-- [ ] **Step 3: Implement formatting**
+- [x] **Step 3: Implement formatting**
 
 `WatchGame/Game/DurationFormatting.swift`:
 
@@ -5762,7 +5762,7 @@ extension Duration {
 }
 ```
 
-- [ ] **Step 4: Implement the statistics sections**
+- [x] **Step 4: Implement the statistics sections**
 
 `WatchGame/Views/Results/StatisticsSections.swift`:
 
@@ -5842,7 +5842,7 @@ struct StatisticsSections: View {
 
 `ConfusionPair` is `Hashable` in the engine (Task 9) so `ForEach(..., id: \.self)` works without an app-side extension.
 
-- [ ] **Step 5: Implement the results screen**
+- [x] **Step 5: Implement the results screen**
 
 Replace `WatchGame/Views/Results/ResultsView.swift` with:
 
@@ -5945,7 +5945,7 @@ struct ResultsView: View {
 Run: `Scripts/build.sh` then `Scripts/test.sh`
 Expected: `BUILD OK`, `TESTS OK`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add WatchGame WatchGameTests
@@ -5962,7 +5962,7 @@ git commit -m "feat(app): results screen with error breakdown and switch cost"
 - Create: `WatchGame/Game/LaunchRequests.swift`
 - Create: `WatchGameTests/LaunchRequestsTests.swift`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `WatchGameTests/LaunchRequestsTests.swift`:
 
@@ -5994,7 +5994,7 @@ import Testing
 Run: `Scripts/test.sh`
 Expected: compile error for `LaunchRequests`.
 
-- [ ] **Step 3: Implement launch requests**
+- [x] **Step 3: Implement launch requests**
 
 `WatchGame/Game/LaunchRequests.swift`:
 
@@ -6027,7 +6027,7 @@ final class LaunchRequests {
 }
 ```
 
-- [ ] **Step 4: Implement Home**
+- [x] **Step 4: Implement Home**
 
 Replace `WatchGame/Views/Home/HomeView.swift` with:
 
@@ -6140,7 +6140,7 @@ struct HomeView: View {
 }
 ```
 
-- [ ] **Step 5: Implement Settings**
+- [x] **Step 5: Implement Settings**
 
 `WatchGame/Views/Settings/SettingsView.swift`:
 
@@ -6230,7 +6230,7 @@ struct HistoryView: View {
 Run: `Scripts/build.sh` then `Scripts/test.sh`
 Expected: `BUILD OK`, `TESTS OK`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add WatchGame WatchGameTests
@@ -6244,7 +6244,7 @@ git commit -m "feat(app): home screen, run presentation, daily challenge and set
 - Modify: `WatchGame/Views/History/HistoryView.swift` (replace the stub)
 - Create: `WatchGameTests/HistorySummaryTests.swift`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `WatchGameTests/HistorySummaryTests.swift`:
 
@@ -6347,7 +6347,7 @@ import SwipeSortEngine
 Run: `Scripts/test.sh`
 Expected: compile error for `HistorySummary`.
 
-- [ ] **Step 3: Implement the summary**
+- [x] **Step 3: Implement the summary**
 
 `WatchGame/Persistence/HistorySummary.swift`:
 
@@ -6439,7 +6439,7 @@ struct HistorySummary {
 }
 ```
 
-- [ ] **Step 4: Implement the History screen**
+- [x] **Step 4: Implement the History screen**
 
 Replace `WatchGame/Views/History/HistoryView.swift` with:
 
@@ -6580,7 +6580,7 @@ struct HistoryView: View {
 Run: `Scripts/build.sh` then `Scripts/test.sh`
 Expected: `BUILD OK`, `TESTS OK`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add WatchGame WatchGameTests
@@ -6660,7 +6660,7 @@ git commit -m "chore: layout and accessibility pass across watch sizes"
 - Create: `WatchGame.xcodeproj/xcshareddata/xcschemes/WatchGameContainer.xcscheme`
 - Create: `README.md`
 
-- [ ] **Step 1: Generate a placeholder icon**
+- [x] **Step 1: Generate a placeholder icon**
 
 The script writes an SVG of four Okabe-Ito shapes on a dark background and rasterises it with Quick Look.
 
@@ -6716,11 +6716,11 @@ Update `WatchGame/Assets.xcassets/AppIcon.appiconset/Contents.json` to reference
 }
 ```
 
-- [ ] **Step 2: Add the container scheme used for archiving**
+- [x] **Step 2: Add the container scheme used for archiving**
 
 `WatchGame.xcodeproj/xcshareddata/xcschemes/WatchGameContainer.xcscheme`: copy `WatchGame.xcscheme`, then replace every `AA000000000000000000A100` with `AA000000000000000000A200`, every `WatchGame.app` with `WatchGameContainer.app`, every `BlueprintName = "WatchGame"` with `BlueprintName = "WatchGameContainer"`, and delete the whole `<Testables>...</Testables>` block. Archiving this scheme (Product, Archive in Xcode, or `xcodebuild -scheme WatchGameContainer archive`) produces the App Store package that contains the watch app.
 
-- [ ] **Step 3: Write the README**
+- [x] **Step 3: Write the README**
 
 `README.md`:
 
@@ -6754,12 +6754,12 @@ A standalone Apple Watch sorting game. Flick each item toward the edge that matc
 Archive the `WatchGameContainer` scheme, set `DEVELOPMENT_TEAM` in the project (or sign in to Xcode), and upload through Organizer. Bundle identifiers are `com.pynto.swipesort` (container) and `com.pynto.swipesort.watchkitapp` (watch app).
 ```
 
-- [ ] **Step 4: Build**
+- [x] **Step 4: Build**
 
 Run: `Scripts/build.sh`
 Expected: `BUILD OK`, no asset catalog warnings about the icon.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Tools WatchGame WatchGame.xcodeproj README.md
@@ -6780,7 +6780,7 @@ git commit -m "chore: placeholder icon, container archive scheme and README"
 - Modify: `WatchGame/Views/Home/HomeView.swift`
 - Create: `WatchGameTests/WidgetSummaryTests.swift`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `WatchGameTests/WidgetSummaryTests.swift`:
 
@@ -6831,7 +6831,7 @@ import Testing
 Run: `Scripts/test.sh`
 Expected: compile error for `WidgetSummary`.
 
-- [ ] **Step 3: Implement the shared summary**
+- [x] **Step 3: Implement the shared summary**
 
 `WatchGame/Widget/WidgetSummary.swift` (this file is added to both the app and the extension targets in Step 5):
 
@@ -6898,7 +6898,7 @@ struct WidgetSummary: Codable, Equatable, Sendable {
 
 `WidgetSummary.dayKey` duplicates `DailySeed.dayKey` on purpose so the extension does not need the engine package.
 
-- [ ] **Step 4: Write the widget, its Info.plist and entitlements**
+- [x] **Step 4: Write the widget, its Info.plist and entitlements**
 
 `WatchGameWidget/WatchGameWidget.swift`:
 
@@ -7040,7 +7040,7 @@ struct WatchGameWidget: Widget {
 </plist>
 ```
 
-- [ ] **Step 5: Add the extension target to the project**
+- [x] **Step 5: Add the extension target to the project**
 
 Edit `WatchGame.xcodeproj/project.pbxproj`:
 
@@ -7167,7 +7167,7 @@ Edit `WatchGame.xcodeproj/project.pbxproj`:
 
 Run `plutil -lint WatchGame.xcodeproj/project.pbxproj` after editing; it must print `OK`.
 
-- [ ] **Step 6: Write the summary from the app and add the intent**
+- [x] **Step 6: Write the summary from the app and add the intent**
 
 `WatchGame/Game/StartDailyChallengeIntent.swift`:
 
@@ -7238,11 +7238,11 @@ Add `import OSLog` to `AppEnvironment.swift`. Call `environment.refreshWidgetSum
 Run: `Scripts/build.sh` then `Scripts/test.sh`
 Expected: `BUILD OK`, `TESTS OK`. If the build complains that the extension needs an `@main` and finds two, ensure `WidgetSummary.swift` is the only app file compiled into the extension (its `PBXBuildFile` is the only entry in the extension's Sources phase besides the synchronized folder).
 
-- [ ] **Step 8: Verify the widget on the simulator**
+- [x] **Step 8: Verify the widget on the simulator**
 
 Install and launch the app on a booted simulator, play one daily to completion, then add the widget to the Smart Stack in the simulator (long press the watch face, Edit, add "Swipe Sort"). Expected: it shows "Daily done" and the streak. Tap it: the app opens on Home (no new run starts because the daily is already done for today only if a run is in progress; otherwise it starts the daily, which is the specified behaviour).
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add WatchGame WatchGameWidget WatchGameTests WatchGame.xcodeproj
@@ -7257,7 +7257,7 @@ git commit -m "feat(widget): Smart Stack daily widget, App Group summary, releva
 - Create: `WatchGameUITests/LaunchAndPlayTests.swift`
 - Create: `docs/release-checklist.md`
 
-- [ ] **Step 1: Add the UI test target**
+- [x] **Step 1: Add the UI test target**
 
 In `project.pbxproj` add a target `WatchGameUITests` with id `AA000000000000000000A500`, product `AA000000000000000000A501` (`WatchGameUITests.xctest`, `explicitFileType = wrapper.cfbundle`), synchronized root group `AA000000000000000000A502` (`path = WatchGameUITests`), Sources `A503`, Frameworks `A504`, Resources `A505`, configuration list `A506` with Debug `A507` and Release `A508`, a dependency `A509` on the `WatchGame` target through proxy `A50A`, `productType = "com.apple.product-type.bundle.ui-testing"`, and `TargetAttributes` entry `AA000000000000000000A500 = { CreatedOnToolsVersion = 27.0; TestTargetID = AA000000000000000000A100; };`. Build settings for `A507`/`A508`:
 
@@ -7305,7 +7305,7 @@ nonisolated final class LaunchAndPlayTests: XCTestCase {
 Run: `Scripts/test.sh -only-testing:WatchGameUITests`
 Expected: `TESTS OK`.
 
-- [ ] **Step 3: Write the release checklist**
+- [x] **Step 3: Write the release checklist**
 
 `docs/release-checklist.md`:
 
@@ -7338,7 +7338,7 @@ Expected: `TESTS OK`.
 - [ ] TestFlight build installed on a real watch and the hardware pass above completed.
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add WatchGame.xcodeproj WatchGameUITests docs/release-checklist.md
@@ -7346,6 +7346,9 @@ git commit -m "test(ui): launch-and-play smoke test; docs: release checklist"
 ```
 
 ## Execution notes
+
+Status on 2026-09-24: Tasks 1 to 19 and 21 to 23 are implemented and committed. Every step that runs `Scripts/test.sh` and all of Task 20 are still unticked because no watchOS 27 simulator runtime could be registered on the build Mac (see the README); the engine tests pass with `Scripts/engine-test.sh`, and the app, widget, unit test and UI test bundles all compile with `build-for-testing`. `Tools/plan_apply.py` writes a task's file blocks from this plan and `Tools/plan_sync.py` copies a file's current content back into its block.
+
 
 - Tasks 1 to 9 need only macOS and `swift test`; they can be done before the watchOS simulator runtime is available.
 - Tasks 10 onwards need `Scripts/build.sh` (no simulator device required, only the SDK) and `Scripts/test.sh` (needs a booted watchOS 27 simulator).
