@@ -3328,7 +3328,7 @@ import SwipeSortEngine
 }
 ```
 
-- [ ] **Step 4: Create the build and test scripts**
+- [x] **Step 4: Create the build and test scripts**
 
 `Scripts/build.sh`:
 
@@ -3371,7 +3371,7 @@ Run `chmod +x Scripts/build.sh Scripts/test.sh`.
 Run: `Scripts/build.sh`
 Expected: `BUILD OK`. If xcodebuild reports the project cannot be opened, the pbxproj has a syntax slip: run `plutil -lint WatchGame.xcodeproj/project.pbxproj` to locate it. If it reports a missing package product, check `relativePath = Packages/SwipeSortEngine` matches the folder.
 
-- [ ] **Step 6: Run the watch unit tests**
+- [x] **Step 6: Run the watch unit tests**
 
 Run: `Scripts/test.sh`
 Expected: `TESTS OK` with 1 test passing. The first run boots the simulator and takes a couple of minutes.
@@ -3493,7 +3493,7 @@ private final class TestBundleMarker {}
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `Scripts/test.sh`
 Expected: compile errors for `PackLoader` and `Localization`.
@@ -3602,7 +3602,7 @@ Replace `WatchGame/Localizable.xcstrings` with:
 }
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `Scripts/test.sh`
 Expected: `TESTS OK`. If `loaderSkipsInvalidPacksAndKeepsValidOnes` finds no fixtures, confirm the `Fixtures` folder sits under `WatchGameTests/` so the synchronized group copies the JSON files into the test bundle.
@@ -3730,7 +3730,7 @@ import SwipeSortEngine
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `Scripts/test.sh`
 Expected: compile errors for `RunEntry`, `HistoryStore`.
@@ -4020,7 +4020,7 @@ final class HistoryStore {
 }
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `Scripts/test.sh`
 Expected: `TESTS OK`. If `#Predicate` on `endedAt == nil` fails to compile, write it as `$0.endedAt == nil` inside the macro exactly as shown; SwiftData supports optional comparisons to nil.
@@ -4086,7 +4086,7 @@ import SwipeSortEngine
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `Scripts/test.sh`
 Expected: compile errors for `hapticType`, `SoundCue`, `SoundAsset`.
@@ -4345,7 +4345,7 @@ if __name__ == "__main__":
 Run: `python3 Tools/generate_sounds.py`
 Expected: eighteen `wrote WatchGame/Resources/Sounds/<name>.wav` lines: the thirteen `correct-NN` variants at 110 ms, `wrong` 180 ms, `timeout` 220 ms, `roundStart` 260 ms, `perfect` 440 ms and `runEnd` 480 ms. watchOS has no `AVAudioUnitTimePitch`, which is why the correct sound is rendered once per semitone rather than pitch-shifted at runtime.
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [x] **Step 6: Run the tests to verify they pass**
 
 Run: `Scripts/test.sh`
 Expected: `TESTS OK`.
@@ -4481,7 +4481,7 @@ final class RecordingHaptics: HapticsService {
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `Scripts/test.sh`
 Expected: compile errors for `GameSession`.
@@ -4851,7 +4851,7 @@ struct HomeView: View {
 }
 ```
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [x] **Step 6: Run the tests to verify they pass**
 
 Run: `Scripts/test.sh`
 Expected: `TESTS OK`. The two sleeping tests take about three seconds together.
@@ -4918,7 +4918,7 @@ import SwipeSortEngine
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `Scripts/test.sh`
 Expected: compile error for `SwipeClassifier`.
@@ -5130,7 +5130,7 @@ struct EdgeLabelsView: View {
 }
 ```
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [x] **Step 6: Run the tests to verify they pass**
 
 Run: `Scripts/test.sh`
 Expected: `TESTS OK`.
@@ -5692,7 +5692,7 @@ struct ResultsView: View {
 Run: `Scripts/build.sh`
 Expected: `BUILD OK`.
 
-- [ ] **Step 7: Run the tests**
+- [x] **Step 7: Run the tests**
 
 Run: `Scripts/test.sh`
 Expected: `TESTS OK`.
@@ -5735,7 +5735,7 @@ import Testing
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `Scripts/test.sh`
 Expected: compile error, `secondsText` not found.
@@ -5941,7 +5941,7 @@ struct ResultsView: View {
 }
 ```
 
-- [ ] **Step 6: Build and test**
+- [x] **Step 6: Build and test**
 
 Run: `Scripts/build.sh` then `Scripts/test.sh`
 Expected: `BUILD OK`, `TESTS OK`.
@@ -5990,7 +5990,7 @@ import Testing
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `Scripts/test.sh`
 Expected: compile error for `LaunchRequests`.
@@ -6229,7 +6229,7 @@ struct HistoryView: View {
 }
 ```
 
-- [ ] **Step 6: Build and test**
+- [x] **Step 6: Build and test**
 
 Run: `Scripts/build.sh` then `Scripts/test.sh`
 Expected: `BUILD OK`, `TESTS OK`.
@@ -6346,7 +6346,7 @@ import SwipeSortEngine
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `Scripts/test.sh`
 Expected: compile error for `HistorySummary`.
@@ -6585,7 +6585,7 @@ struct HistoryView: View {
 
 `ResultsView` shows the sections for any `RunSummary`, including incomplete ones, because `ResultsData` does not check `completed`; History passes the run's actual end reason so the title and rounds count read correctly.
 
-- [ ] **Step 5: Build and test**
+- [x] **Step 5: Build and test**
 
 Run: `Scripts/build.sh` then `Scripts/test.sh`
 Expected: `BUILD OK`, `TESTS OK`.
@@ -6839,7 +6839,7 @@ import Testing
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `Scripts/test.sh`
 Expected: compile error for `WidgetSummary`.
@@ -7246,7 +7246,7 @@ extension AppEnvironment {
 
 Call `environment.refreshWidgetSummary()` at the end of `AppEnvironment.live()`, in `HomeView.dismissRun()` after clearing the session, from Home's `onChange` of the session's end reason (so a run left on the Results screen still updates the widget), and in `SettingsView` after `environment.history.reset()`.
 
-- [ ] **Step 7: Build and test**
+- [x] **Step 7: Build and test**
 
 Run: `Scripts/build.sh` then `Scripts/test.sh`
 Expected: `BUILD OK`, `TESTS OK`. If the build complains that the extension needs an `@main` and finds two, ensure `WidgetSummary.swift` is the only app file compiled into the extension (its `PBXBuildFile` is the only entry in the extension's Sources phase besides the synchronized folder).
@@ -7291,7 +7291,7 @@ The UI test class is declared `nonisolated` because the project defaults to main
 
 Add the group to the main group, the product to Products, and the target to `targets`. In `WatchGame.xcscheme`, add a second `TestableReference` for `AA000000000000000000A500` / `WatchGameUITests.xctest` / `WatchGameUITests`. Run `plutil -lint` on the pbxproj.
 
-- [ ] **Step 2: Write the smoke test**
+- [x] **Step 2: Write the smoke test**
 
 `WatchGameUITests/LaunchAndPlayTests.swift` (XCTest is required for UI tests):
 
@@ -7363,7 +7363,7 @@ git commit -m "test(ui): launch-and-play smoke test; docs: release checklist"
 
 ## Execution notes
 
-Status on 2026-09-24: Tasks 1 to 19 and 21 to 23 are implemented and committed. Every step that runs `Scripts/test.sh` and all of Task 20 are still unticked because no watchOS 27 simulator runtime could be registered on the build Mac (see the README); the engine tests pass with `Scripts/engine-test.sh`, and the app, widget, unit test and UI test bundles all compile with `build-for-testing`. `Tools/plan_apply.py` writes a task's file blocks from this plan and `Tools/plan_sync.py` copies a file's current content back into its block.
+Status on 2026-09-24: Tasks 1 to 19 and 21 to 23 are implemented, committed and tested: 75 engine tests pass with `Scripts/engine-test.sh`, and `Scripts/test.sh` passes 37 unit tests plus the UI smoke test on the watchOS 27 simulator. Task 20 (layout and accessibility pass) is in progress. `Tools/plan_apply.py` writes a task's file blocks from this plan and `Tools/plan_sync.py` copies a file's current content back into its block.
 
 
 - Tasks 1 to 9 need only macOS and `swift test`; they can be done before the watchOS simulator runtime is available.
