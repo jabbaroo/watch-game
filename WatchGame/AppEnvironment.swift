@@ -65,6 +65,14 @@ final class AppEnvironment {
                                   haptics: haptics, sound: sound, history: history, startedAt: now)
         self.session = session
         session.start()
+        #if DEBUG
+        // UI tests and the layout pass pass "-debugStartRound N" to open the run at round N.
+        let target = UserDefaults.standard.integer(forKey: "debugStartRound")
+        while target > 1, session.roundNumber < target, session.screen == .roundIntro {
+            session.startRound()
+            session.debugExpireRoundClock()
+        }
+        #endif
         return session
     }
 }

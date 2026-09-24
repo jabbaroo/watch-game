@@ -3231,6 +3231,15 @@ struct HomeView: View {
 {
   "colors" : [
     {
+      "color" : {
+        "color-space" : "srgb",
+        "components" : {
+          "alpha" : "1.000",
+          "blue" : "0.750",
+          "green" : "0.820",
+          "red" : "0.200"
+        }
+      },
       "idiom" : "universal"
     }
   ],
@@ -4581,6 +4590,14 @@ final class AppEnvironment {
                                   haptics: haptics, sound: sound, history: history, startedAt: now)
         self.session = session
         session.start()
+        #if DEBUG
+        // UI tests and the layout pass pass "-debugStartRound N" to open the run at round N.
+        let target = UserDefaults.standard.integer(forKey: "debugStartRound")
+        while target > 1, session.roundNumber < target, session.screen == .roundIntro {
+            session.startRound()
+            session.debugExpireRoundClock()
+        }
+        #endif
         return session
     }
 }
@@ -5080,6 +5097,7 @@ struct EdgeLabelsView: View {
     var labels: [SwipeEdge: String]
     var highlighted: SwipeEdge?
     var tapToSort: Bool
+    var fontSize: CGFloat = 13
     var onTap: (SwipeEdge) -> Void
 
     var body: some View {
@@ -5097,7 +5115,7 @@ struct EdgeLabelsView: View {
     @ViewBuilder
     private func label(_ text: String, edge: SwipeEdge) -> some View {
         let core = Text(text)
-            .font(.system(size: 13, weight: .semibold, design: .rounded))
+            .font(.system(size: fontSize, weight: .semibold, design: .rounded))
             .lineLimit(1)
             .minimumScaleFactor(0.6)
             .padding(.horizontal, 8)
@@ -5368,9 +5386,12 @@ struct PlayView: View {
     var body: some View {
         GeometryReader { geometry in
             let bounds = geometry.size
-            let itemSize = min(bounds.width, bounds.height) * 0.36
+            // 40 and 41 mm watches are under 180 points wide; give the edge labels more room there.
+            let compact = bounds.width < 180
+            let itemSize = min(bounds.width, bounds.height) * (compact ? 0.32 : 0.36)
             ZStack {
-                EdgeLabelsView(labels: labels, highlighted: highlightedEdge, tapToSort: tapToSort || voiceOver) { edge in
+                EdgeLabelsView(labels: labels, highlighted: highlightedEdge, tapToSort: tapToSort || voiceOver,
+                               fontSize: compact ? 12 : 13) { edge in
                     session.answer(edge)
                 }
                 itemLayer(itemSize: itemSize)
@@ -6604,7 +6625,7 @@ git commit -m "feat(app): history summary with charts, sharpest time of day and 
 - Create: `docs/screenshots/` (generated PNGs, committed)
 - Modify: any view that fails the checks below
 
-- [ ] **Step 1: Write the screenshot script**
+- [x] **Step 1: Write the screenshot script**
 
 `Scripts/screenshots.sh`:
 
@@ -6637,7 +6658,63 @@ done
 
 Run `chmod +x Scripts/screenshots.sh` then `Scripts/screenshots.sh`. Any device name that does not exist in this simulator set is skipped; create missing ones with `xcrun simctl create "<name>" "<device type id>" "<watchOS runtime id>"` using ids from `xcrun simctl list devicetypes` and `xcrun simctl list runtimes`.
 
-- [ ] **Step 2: Check the play screen on the smallest and largest sizes**
+- [x] **Step 2: Check the play screen on the smallest and largest sizes**
+
+The play screen is captured by a UI test rather than by hand. `AppEnvironment.startRun` honours a debug-only `-debugStartRound N` launch argument that opens the run at round N (round 5 is the first four-edge round), and `-settings.tapToSort YES` turns tap targets on through the argument domain of `UserDefaults`.
+
+`WatchGameUITests/PlayScreenScreenshotTests.swift`:
+
+```swift
+import XCTest
+
+/// Captures the play screen for the layout pass. Run per device with
+/// `-only-testing:WatchGameUITests/PlayScreenScreenshotTests`, then export the
+/// attachments with `xcrun xcresulttool export attachments`.
+nonisolated final class PlayScreenScreenshotTests: XCTestCase {
+    @MainActor
+    func testCaptureFourEdgeRoundWithTapTargets() {
+        capture(named: "play-4edges-tap", launchArguments: ["-settings.tapToSort", "YES", "-debugStartRound", "5"])
+    }
+
+    @MainActor
+    func testCaptureFourEdgeRoundSwipeOnly() {
+        capture(named: "play-4edges-swipe", launchArguments: ["-settings.tapToSort", "NO", "-debugStartRound", "5"])
+    }
+
+    @MainActor
+    private func capture(named name: String, launchArguments: [String]) {
+        let app = XCUIApplication()
+        app.launchArguments = launchArguments
+        app.launch()
+        XCTAssertTrue(app.buttons["Play"].waitForExistence(timeout: 5))
+        attach("home", app)
+        app.buttons["Play"].tap()
+        attach("round-intro", app)
+        XCTAssertTrue(app.buttons["Pause"].waitForExistence(timeout: 6), "play screen did not appear")
+        attach(name, app)
+        app.buttons["Pause"].tap()
+        XCTAssertTrue(app.buttons["Resume"].waitForExistence(timeout: 2))
+        attach("paused", app)
+    }
+
+    @MainActor
+    private func attach(_ name: String, _ app: XCUIApplication) {
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+}
+```
+
+Run it per device and export the screenshots:
+
+```bash
+xcodebuild -project WatchGame.xcodeproj -scheme WatchGame -destination 'platform=watchOS Simulator,name=Apple Watch SE 3 (40mm)' -derivedDataPath .build/DerivedDataUITest -resultBundlePath .build/play-40mm.xcresult -quiet CODE_SIGNING_ALLOWED=NO -only-testing:WatchGameUITests/PlayScreenScreenshotTests test
+xcrun xcresulttool export attachments --path .build/play-40mm.xcresult --output-path docs/screenshots/play/AppleWatchSE340mm
+```
+
+Result on 2026-09-24: on 40 mm the item ring touched the left and right pills, so `PlayView` now uses a 0.32 item multiplier and 12-point labels when the width is under 180 points; the re-capture is clean. 49 mm was clean as captured. Screenshots are in `docs/screenshots/play/`.
 
 On the 40mm and 49mm simulators: launch the app, start a run, and confirm with a screenshot (`xcrun simctl io booted screenshot play.png`) that all four edge labels are legible, do not overlap the item or its ring, and with Tap to sort on each label is at least 44 points tall. If labels overlap on the small sizes, use the `GeometryReader` width already in `PlayView`: for widths under 180 points reduce the `itemSize` multiplier from 0.36 to 0.32 and the edge label font in `EdgeLabelsView` from 13 to 12 (`horizontalSizeClass` is not available on watchOS).
 
@@ -7363,7 +7440,7 @@ git commit -m "test(ui): launch-and-play smoke test; docs: release checklist"
 
 ## Execution notes
 
-Status on 2026-09-24: Tasks 1 to 19 and 21 to 23 are implemented, committed and tested: 75 engine tests pass with `Scripts/engine-test.sh`, and `Scripts/test.sh` passes 37 unit tests plus the UI smoke test on the watchOS 27 simulator. Task 20 (layout and accessibility pass) is in progress. `Tools/plan_apply.py` writes a task's file blocks from this plan and `Tools/plan_sync.py` copies a file's current content back into its block.
+Status on 2026-09-24: Tasks 1 to 19 and 21 to 23 are implemented, committed and tested: 75 engine tests pass with `Scripts/engine-test.sh`, and `Scripts/test.sh` passes 37 unit tests plus the UI smoke test on the watchOS 27 simulator. Task 20 is done except its VoiceOver and Reduce Motion checks, which need the simulator's accessibility settings or hardware and remain on the release checklist. `Tools/plan_apply.py` writes a task's file blocks from this plan and `Tools/plan_sync.py` copies a file's current content back into its block.
 
 
 - Tasks 1 to 9 need only macOS and `swift test`; they can be done before the watchOS simulator runtime is available.

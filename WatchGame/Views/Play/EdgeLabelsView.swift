@@ -7,6 +7,7 @@ struct EdgeLabelsView: View {
     var labels: [SwipeEdge: String]
     var highlighted: SwipeEdge?
     var tapToSort: Bool
+    var fontSize: CGFloat = 13
     var onTap: (SwipeEdge) -> Void
 
     var body: some View {
@@ -24,7 +25,7 @@ struct EdgeLabelsView: View {
     @ViewBuilder
     private func label(_ text: String, edge: SwipeEdge) -> some View {
         let core = Text(text)
-            .font(.system(size: 13, weight: .semibold, design: .rounded))
+            .font(.system(size: fontSize, weight: .semibold, design: .rounded))
             .lineLimit(1)
             .minimumScaleFactor(0.6)
             .padding(.horizontal, 8)

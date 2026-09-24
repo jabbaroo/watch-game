@@ -17,9 +17,12 @@ struct PlayView: View {
     var body: some View {
         GeometryReader { geometry in
             let bounds = geometry.size
-            let itemSize = min(bounds.width, bounds.height) * 0.36
+            // 40 and 41 mm watches are under 180 points wide; give the edge labels more room there.
+            let compact = bounds.width < 180
+            let itemSize = min(bounds.width, bounds.height) * (compact ? 0.32 : 0.36)
             ZStack {
-                EdgeLabelsView(labels: labels, highlighted: highlightedEdge, tapToSort: tapToSort || voiceOver) { edge in
+                EdgeLabelsView(labels: labels, highlighted: highlightedEdge, tapToSort: tapToSort || voiceOver,
+                               fontSize: compact ? 12 : 13) { edge in
                     session.answer(edge)
                 }
                 itemLayer(itemSize: itemSize)
