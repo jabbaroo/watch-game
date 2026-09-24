@@ -1,0 +1,13 @@
+{
+  "id": "fixture-broken",
+  "nameKey": "pack.broken",
+  "dimensions": [
+    { "id": "kind", "nameKey": "dimension.kind", "values": [
+      { "id": "a", "labelKey": "kind.a" },
+      { "id": "b", "labelKey": "kind.b" }
+    ] }
+  ],
+  "items": [
+    { "id": "a1", "attributes": { "kind": "a" }, "visual": { "type": "shape", "kind": "circle", "colour": "#0072B2" } }
+  ]
+}

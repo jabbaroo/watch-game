@@ -1,0 +1,15 @@
+{
+  "id": "fixture-valid",
+  "nameKey": "pack.fixture",
+  "dimensions": [
+    { "id": "kind", "nameKey": "dimension.kind", "values": [
+      { "id": "a", "labelKey": "kind.a" },
+      { "id": "b", "labelKey": "kind.b" }
+    ] }
+  ],
+  "items": [
+    { "id": "a1", "attributes": { "kind": "a" }, "visual": { "type": "shape", "kind": "circle", "colour": "#0072B2" } },
+    { "id": "b1", "attributes": { "kind": "b" }, "visual": { "type": "shape", "kind": "square", "colour": "#D55E00" } },
+    { "id": "b2", "attributes": { "kind": "b" }, "visual": { "type": "image", "assetName": "fixture-image" } }
+  ]
+}
