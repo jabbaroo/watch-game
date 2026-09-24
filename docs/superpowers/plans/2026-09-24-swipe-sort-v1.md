@@ -7244,7 +7244,7 @@ extension AppEnvironment {
 }
 ```
 
-Add `import OSLog` to `AppEnvironment.swift`. Call `environment.refreshWidgetSummary()` in three places: at the end of `AppEnvironment.live()` (before `return`), in `HomeView.dismissRun()` after clearing the session, and in `SettingsView` after `environment.history.reset()`.
+Call `environment.refreshWidgetSummary()` at the end of `AppEnvironment.live()`, in `HomeView.dismissRun()` after clearing the session, from Home's `onChange` of the session's end reason (so a run left on the Results screen still updates the widget), and in `SettingsView` after `environment.history.reset()`.
 
 - [ ] **Step 7: Build and test**
 
