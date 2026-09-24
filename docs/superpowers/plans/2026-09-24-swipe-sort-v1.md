@@ -6639,11 +6639,11 @@ Run `chmod +x Scripts/screenshots.sh` then `Scripts/screenshots.sh`. Any device 
 
 - [ ] **Step 2: Check the play screen on the smallest and largest sizes**
 
-On the 41mm and 49mm simulators: launch the app, start a run, and confirm with a screenshot (`xcrun simctl io booted screenshot play.png`) that all four edge labels are legible, do not overlap the item or its ring, and with Tap to sort on each label is at least 44 points tall. If labels overlap on 41mm, reduce `itemSize` multiplier in `PlayView` from 0.36 to 0.32 and the label font from 13 to 12 for widths under 180 points using `@Environment(\.horizontalSizeClass)` is not available on watchOS, so use the `GeometryReader` width already in `PlayView`.
+On the 40mm and 49mm simulators: launch the app, start a run, and confirm with a screenshot (`xcrun simctl io booted screenshot play.png`) that all four edge labels are legible, do not overlap the item or its ring, and with Tap to sort on each label is at least 44 points tall. If labels overlap on the small sizes, use the `GeometryReader` width already in `PlayView`: for widths under 180 points reduce the `itemSize` multiplier from 0.36 to 0.32 and the edge label font in `EdgeLabelsView` from 13 to 12 (`horizontalSizeClass` is not available on watchOS).
 
 - [ ] **Step 3: Accessibility checks**
 
-With the Accessibility Inspector target set to the booted simulator (Xcode menu Open Developer Tool, Accessibility Inspector) or by reading labels with `xcrun simctl` unavailable, verify by code review and the Inspector:
+Using Accessibility Inspector (Xcode, Open Developer Tool, Accessibility Inspector) targeted at the booted simulator, plus code review, verify:
 - Every button on Home, Settings, Paused and Results has a label that reads as an action.
 - The play item announces its category (Task 16 sets `accessibilityLabel`) and exposes one custom action per active edge.
 - SwipeEdge labels are hidden from VoiceOver when tap to sort is off and become buttons when it is on.
@@ -6708,7 +6708,7 @@ with tempfile.TemporaryDirectory() as tmp:
 ```
 
 Run: `python3 Tools/generate_icon.py`
-Expected: `wrote WatchGame/Assets.xcassets/AppIcon.appiconset/AppIcon.png`. Verify with `sips -g pixelWidth -g pixelHeight -g hasAlpha <file>` that it is 1024 by 1024. If `hasAlpha` is yes, flatten it: `sips -s format jpeg` then back to png is not needed; instead re-run with `--setProperty hasAlpha no` is unsupported, so use `sips -m /System/Library/ColorSync/Profiles/sRGB\ Profile.icc` and accept alpha; App Store Connect rejects alpha only for iOS icons, and the watch icon is masked by the system.
+Expected: `wrote WatchGame/Assets.xcassets/AppIcon.appiconset/AppIcon.png`. Verify with `sips -g pixelWidth -g pixelHeight -g hasAlpha <file>` that it prints 1024, 1024 and `hasAlpha: no`. App Store Connect rejects a 1024 icon with an alpha channel, which is why the script flattens through a JPEG.
 
 Update `WatchGame/Assets.xcassets/AppIcon.appiconset/Contents.json` to reference the file:
 
@@ -7253,7 +7253,7 @@ Expected: `BUILD OK`, `TESTS OK`. If the build complains that the extension need
 
 - [x] **Step 8: Verify the widget on the simulator**
 
-Install and launch the app on a booted simulator, play one daily to completion, then add the widget to the Smart Stack in the simulator (long press the watch face, Edit, add "Swipe Sort"). Expected: it shows "Daily done" and the streak. Tap it: the app opens on Home (no new run starts because the daily is already done for today only if a run is in progress; otherwise it starts the daily, which is the specified behaviour).
+Install and launch the app on a booted simulator, play one daily to completion, then add the widget to the Smart Stack in the simulator (long press the watch face, Edit, add "Swipe Sort"). Expected: it shows "Daily done" and the streak. Tap it: the app opens and starts the daily (replays are allowed by spec 3.7). If a run is in progress the tap only foregrounds the app.
 
 - [x] **Step 9: Commit**
 
@@ -7272,7 +7272,7 @@ git commit -m "feat(widget): Smart Stack daily widget, App Group summary, releva
 
 - [x] **Step 1: Add the UI test target**
 
-In `project.pbxproj` add a target `WatchGameUITests` with id `AA000000000000000000A500`, product `AA000000000000000000A501` (`WatchGameUITests.xctest`, `explicitFileType = wrapper.cfbundle`), synchronized root group `AA000000000000000000A502` (`path = WatchGameUITests`), Sources `A503`, Frameworks `A504`, Resources `A505`, configuration list `A506` with Debug `A507` and Release `A508`, a dependency `A509` on the `WatchGame` target through proxy `A50A`, `productType = "com.apple.product-type.bundle.ui-testing"`, and `TargetAttributes` entry `AA000000000000000000A500 = { CreatedOnToolsVersion = 27.0; TestTargetID = AA000000000000000000A100; };`. Build settings for `A507`/`A508`:
+The UI test class is declared `nonisolated` because the project defaults to main-actor isolation while `XCTestCase` initialisers are nonisolated. In `project.pbxproj` add a target `WatchGameUITests` with id `AA000000000000000000A500`, product `AA000000000000000000A501` (`WatchGameUITests.xctest`, `explicitFileType = wrapper.cfbundle`), synchronized root group `AA000000000000000000A502` (`path = WatchGameUITests`), Sources `A503`, Frameworks `A504`, Resources `A505`, configuration list `A506` with Debug `A507` and Release `A508`, a dependency `A509` on the `WatchGame` target through proxy `A50A`, `productType = "com.apple.product-type.bundle.ui-testing"`, and `TargetAttributes` entry `AA000000000000000000A500 = { CreatedOnToolsVersion = 27.0; TestTargetID = AA000000000000000000A100; };`. Build settings for `A507`/`A508`:
 
 ```
 				CODE_SIGN_STYLE = Automatic;
@@ -7367,5 +7367,5 @@ Status on 2026-09-24: Tasks 1 to 19 and 21 to 23 are implemented and committed. 
 
 
 - Tasks 1 to 9 need only macOS and `swift test`; they can be done before the watchOS simulator runtime is available.
-- Tasks 10 onwards need `Scripts/build.sh` (no simulator device required, only the SDK) and `Scripts/test.sh` (needs a booted watchOS 27 simulator).
+- Tasks 10 onwards need `Scripts/build.sh` (no simulator device required, only the SDK) and `Scripts/test.sh` (needs a booted watchOS 27 simulator). Before the first test step run `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -downloadPlatform watchOS` and check `xcrun simctl list runtimes` shows watchOS 27.
 - Each task is independent enough for a fresh subagent given this plan, the spec, and the previous commits.
