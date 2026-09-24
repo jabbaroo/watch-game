@@ -79,6 +79,61 @@ import SwipeSortEngine
         #expect(HistorySummary.make(store: store, calendar: calendar).sharpestTimeOfDay == .evening)
     }
 
+    @Test func profileTakesLatestAndBestPerDimension() throws {
+        let store = try makeStore()
+        func stroopRound(reactionCongruent: Int, reactionIncongruent: Int) -> RoundResult {
+            var items: [ItemResult] = []
+            for index in 0..<3 {
+                items.append(ItemResult(roundIndex: 0, itemIndex: index, dimensionID: "ink", attributes: ["ink": "red", "word": "red"],
+                                        expectedCategoryID: "red", answeredCategoryID: "red", correct: true, timedOut: false,
+                                        reaction: .milliseconds(reactionCongruent), window: .seconds(2), points: 100))
+                items.append(ItemResult(roundIndex: 0, itemIndex: index + 3, dimensionID: "ink", attributes: ["ink": "red", "word": "blue"],
+                                        expectedCategoryID: "red", answeredCategoryID: "red", correct: true, timedOut: false,
+                                        reaction: .milliseconds(reactionIncongruent), window: .seconds(2), points: 100))
+            }
+            return RoundResult(index: 0, dimensionID: "ink", categoryCount: 2, perfect: true, cutShort: false, score: 600, items: items)
+        }
+        func goNoGoRound(falseAlarms: Int, holds: Int) -> RoundResult {
+            let items = (0..<holds).map { index in
+                ItemResult(roundIndex: 0, itemIndex: index, dimensionID: "colour", attributes: ["colour": "red", "shape": "star"],
+                           expectedCategoryID: "red", answeredCategoryID: index < falseAlarms ? "red" : nil, correct: index >= falseAlarms,
+                           timedOut: false, reaction: index < falseAlarms ? .milliseconds(400) : nil, window: .seconds(2), points: 0, hold: true)
+            }
+            return RoundResult(index: 0, dimensionID: "colour", categoryCount: 2, perfect: false, cutShort: false, score: 0, items: items)
+        }
+        func twoBackRound(correct: Int, total: Int) -> RoundResult {
+            let items = (0..<total).map { index in
+                ItemResult(roundIndex: 0, itemIndex: index, dimensionID: "colour", attributes: ["colour": "red", "shape": "star"],
+                           expectedCategoryID: "red", answeredCategoryID: index < correct ? "red" : "blue", correct: index < correct,
+                           timedOut: false, reaction: .milliseconds(500), window: .seconds(2), points: 0)
+            }
+            return RoundResult(index: 0, dimensionID: "colour", categoryCount: 2, perfect: false, cutShort: false, score: 0, items: items, backDepth: 2)
+        }
+        func record(day: Int, _ round: RoundResult) {
+            let started = date(day: day, hour: 12)
+            let run = store.beginRun(packID: "p", isDaily: false, dailyKey: nil, seed: 1, startedAt: started)
+            store.append(round, to: run)
+            store.finish(run, summary: RunSummary(seed: 1, packID: "p", score: 1, livesRemaining: 3, endReason: .completedAllRounds, rounds: [round]), endedAt: started)
+        }
+        record(day: 1, stroopRound(reactionCongruent: 500, reactionIncongruent: 900))   // interference 400, speed 0.7
+        record(day: 2, stroopRound(reactionCongruent: 500, reactionIncongruent: 700))   // interference 200, speed 0.6
+        record(day: 3, goNoGoRound(falseAlarms: 1, holds: 4))                            // control 0.25
+        record(day: 4, goNoGoRound(falseAlarms: 2, holds: 4))                            // control 0.5 (latest)
+        record(day: 5, twoBackRound(correct: 6, total: 8))                               // memory 0.75
+        record(day: 6, twoBackRound(correct: 4, total: 8))                               // memory 0.5 (latest)
+        let profile = HistorySummary.make(store: store, calendar: calendar).profile
+        let byKind = Dictionary(uniqueKeysWithValues: profile.map { ($0.kind, $0) })
+        #expect(profile.map(\.kind) == [.speed, .switching, .interference, .control, .memory], "every dimension has at least one run measuring it")
+        #expect(byKind[.switching].map { $0.best <= $0.latest } == true, "best switch cost is the lowest one")
+        #expect(byKind[.interference]?.latest == 200)
+        #expect(byKind[.interference]?.best == 200)
+        #expect(byKind[.control]?.latest == 0.5)
+        #expect(byKind[.control]?.best == 0.25)
+        #expect(byKind[.memory]?.latest == 0.5)
+        #expect(byKind[.memory]?.best == 0.75)
+        #expect(byKind[.speed]?.best == 0.5, "the fastest run's mean reaction")
+    }
+
     @Test func pointsAreLimitedToThirtyMostRecent() throws {
         let store = try makeStore()
         for day in 1...35 {

@@ -35,6 +35,27 @@ struct HistoryView: View {
                         chart(summary.points.filter { $0.switchCostMilliseconds != nil }, value: { $0.switchCostMilliseconds ?? 0 })
                     }
                 }
+                if !summary.profile.isEmpty {
+                    Section("Profile") {
+                        ForEach(summary.profile) { metric in
+                            HStack(alignment: .firstTextBaseline) {
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(metric.kind.title)
+                                        .font(.footnote)
+                                    Text("Best \(metric.kind.format(metric.best))")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Text(metric.kind.format(metric.latest))
+                                    .font(.footnote.weight(.semibold))
+                                    .monospacedDigit()
+                                    .multilineTextAlignment(.trailing)
+                            }
+                            .accessibilityElement(children: .combine)
+                        }
+                    }
+                }
                 if let sharpest = summary.sharpestTimeOfDay {
                     Section {
                         LabeledContent("Sharpest", value: sharpest.title)

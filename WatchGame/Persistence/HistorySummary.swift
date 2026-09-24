@@ -35,11 +35,57 @@ struct HistorySummary {
         }
     }
 
+    /// One headline number per cognitive dimension, with the latest and the best value across completed runs.
+    struct ProfileMetric: Identifiable, Equatable {
+        enum Kind: String, CaseIterable {
+            case speed, switching, interference, control, memory
+
+            var title: String {
+                switch self {
+                case .speed: String(localized: "Speed")
+                case .switching: String(localized: "Switching")
+                case .interference: String(localized: "Interference")
+                case .control: String(localized: "Control")
+                case .memory: String(localized: "Memory")
+                }
+            }
+
+            /// Lower is better for everything except memory accuracy.
+            var higherIsBetter: Bool { self == .memory }
+
+            /// The raw value a run contributes, or nil when the run did not measure this dimension.
+            func value(from statistics: RunStatistics) -> Double? {
+                switch self {
+                case .speed: statistics.meanReaction?.seconds
+                case .switching: statistics.switchCost.map { $0 / .milliseconds(1) }
+                case .interference: statistics.conflictCost.map { $0 / .milliseconds(1) }
+                case .control: statistics.falseAlarmRate
+                case .memory: statistics.accuracyByDepth[2]
+                }
+            }
+
+            func format(_ value: Double) -> String {
+                switch self {
+                case .speed: String(format: "%.2f s", value)
+                case .switching, .interference: String(format: "%+d ms", Int(value.rounded()))
+                case .control: String(localized: "\(Int((value * 100).rounded()))% false alarms")
+                case .memory: String(localized: "\(Int((value * 100).rounded()))% at 2-back")
+                }
+            }
+        }
+
+        let kind: Kind
+        let latest: Double
+        let best: Double
+        var id: Kind { kind }
+    }
+
     var bestScore: Int?
     var runsPlayed: Int
     var dailyStreak: Int
     var points: [Point]
     var sharpestTimeOfDay: TimeOfDay?
+    var profile: [ProfileMetric]
     var recentRuns: [RunEntry]
 
     static let chartLimit = 30
@@ -48,9 +94,10 @@ struct HistorySummary {
     @MainActor
     static func make(store: HistoryStore, calendar: Calendar = .current, now: Date = .now) -> HistorySummary {
         let completed = store.completedRuns()
+        let statisticsByRun = Dictionary(uniqueKeysWithValues: completed.map { ($0.id, RunStatistics.compute(rounds: $0.roundResults)) })
         let plotted = Array(completed.prefix(chartLimit)).reversed()
         let points = plotted.enumerated().map { offset, run -> Point in
-            let statistics = RunStatistics.compute(rounds: run.roundResults)
+            let statistics = statisticsByRun[run.id] ?? RunStatistics.compute(rounds: [])
             return Point(
                 id: run.id,
                 index: offset + 1,
@@ -61,9 +108,17 @@ struct HistorySummary {
             )
         }
 
+        // Profile: newest run first, so the first value seen per kind is the latest.
+        var profile: [ProfileMetric] = []
+        for kind in ProfileMetric.Kind.allCases {
+            let values = completed.compactMap { statisticsByRun[$0.id].flatMap(kind.value(from:)) }
+            guard let latest = values.first, let best = kind.higherIsBetter ? values.max() : values.min() else { continue }
+            profile.append(ProfileMetric(kind: kind, latest: latest, best: best))
+        }
+
         var reactionsByBucket: [TimeOfDay: [Double]] = [:]
         for run in completed {
-            guard let reaction = RunStatistics.compute(rounds: run.roundResults).meanReaction?.seconds else { continue }
+            guard let reaction = statisticsByRun[run.id]?.meanReaction?.seconds else { continue }
             let hour = calendar.component(.hour, from: run.startedAt)
             reactionsByBucket[TimeOfDay.bucket(hour: hour), default: []].append(reaction)
         }
@@ -79,6 +134,7 @@ struct HistorySummary {
             dailyStreak: store.dailyStreak(today: now, calendar: calendar),
             points: points,
             sharpestTimeOfDay: sharpest,
+            profile: profile,
             recentRuns: store.allRuns(limit: chartLimit)
         )
     }

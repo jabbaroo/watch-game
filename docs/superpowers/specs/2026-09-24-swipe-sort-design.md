@@ -330,7 +330,7 @@ Swift 6 language mode with strict concurrency. The engine is `Sendable` value ty
 
 ## 13. Roadmap: more cognitive modes
 
-Principle: every mode is a variant of the one flick loop the hand already knows. New modes arrive as packs and rule variants first, and only later as a second input loop. Each mode reports one headline metric, and the History screen grows a small profile (speed, switching, inhibition, memory, attention) built from those metrics. Wording everywhere stays "mental agility" and "see how you switch, focus and remember"; the app never claims to train or improve cognition, and all data stays on the watch.
+Principle: every mode is a variant of the one flick loop the hand already knows. New modes arrive as packs and rule variants first, and only later as a second input loop. Each mode reports one headline metric, and the History screen carries a Profile section built from them: Speed (mean reaction time), Switching (switch cost), Interference (Stroop), Control (false-alarm rate) and Memory (two-back accuracy), each with the latest and the best value across completed runs. Attention joins when a flanker mode exists. Wording everywhere stays "mental agility" and "see how you switch, focus and remember"; the app never claims to train or improve cognition, and all data stays on the watch.
 
 ### 13.1 Stroop (first)
 
