@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import SwipeSortEngine
 
@@ -59,6 +60,28 @@ import Testing
         #expect(result[5].dimensionID == "shape")
         #expect(result[5].activeCategoryIDs.count == 3)
         #expect(result[4].activeCategoryIDs.count == 4)
+    }
+
+    @Test func categoryCountNeverExceedsTheFourEdges() {
+        var pack = ContentPack.shapesAndColours
+        pack.dimensions[0].values.append(CategoryValue(id: "purple", labelKey: "colour.purple", hintKey: nil))
+        pack.items.append(Item(id: "purple-circle", attributes: ["colour": "purple", "shape": "circle"], visual: .shape(kind: .circle, colour: "#CC79A7")))
+        var config = RunConfiguration.standard
+        config.categoryRamp = [5]
+        let result = plans(pack: pack, config: config)
+        for plan in result where plan.dimensionID == "colour" {
+            #expect(plan.activeCategoryIDs.count == 4)
+            #expect(plan.mapping.categoryByEdge.count == 4)
+        }
+    }
+
+    @Test func roundPlanDecodesWithoutBackDepth() throws {
+        let plan = plans()[0]
+        var object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(plan)) as! [String: Any]
+        object.removeValue(forKey: "backDepth")
+        let decoded = try JSONDecoder().decode(RoundPlan.self, from: JSONSerialization.data(withJSONObject: object))
+        #expect(decoded.backDepth == 0)
+        #expect(decoded.itemSeed == plan.itemSeed)
     }
 
     @Test func mappingLookupsAreConsistent() {

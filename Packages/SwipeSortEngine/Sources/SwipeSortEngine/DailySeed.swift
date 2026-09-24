@@ -5,7 +5,7 @@ public enum DailySeed {
     /// "yyyy-MM-dd" in the given calendar's time zone.
     public static func dayKey(for date: Date, calendar: Calendar = .current) -> String {
         let components = calendar.dateComponents([.year, .month, .day], from: date)
-        return String(format: "%04d-%02d-%02d", components.year ?? 0, components.month ?? 0, components.day ?? 0)
+        return String(format: "%04ld-%02ld-%02ld", components.year ?? 0, components.month ?? 0, components.day ?? 0)
     }
 
     /// FNV-1a 64-bit hash of the day key.

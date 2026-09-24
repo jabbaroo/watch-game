@@ -11,7 +11,7 @@ public struct ScoringRules: Sendable, Equatable {
     /// The multiplier steps up on every multiple of `multiplierStep`, so the fifth
     /// consecutive correct answer is the first to score double.
     public func multiplier(streak: Int) -> Int {
-        guard streak >= 1 else { return 1 }
+        guard streak >= 1, multiplierStep > 0 else { return 1 }
         return min(maximumMultiplier, 1 + streak / multiplierStep)
     }
 

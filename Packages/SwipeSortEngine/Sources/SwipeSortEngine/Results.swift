@@ -5,11 +5,11 @@ public struct ItemResult: Sendable, Equatable {
     public var dimensionID: String
     public var attributes: [String: String]
     public var expectedCategoryID: String
-    /// Nil for a timeout.
+    /// Nil for a timeout or a held item.
     public var answeredCategoryID: String?
     public var correct: Bool
     public var timedOut: Bool
-    /// Nil for a timeout.
+    /// Nil for a timeout or a held item.
     public var reaction: Duration?
     public var window: Duration
     public var points: Int

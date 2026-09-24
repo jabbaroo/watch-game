@@ -20,6 +20,8 @@ public struct RunState: Sendable, Equatable {
     private var shownCategories: [String] = []
     private var roundResumedAt: Duration = .zero
     private var roundElapsedBeforeResume: Duration = .zero
+    /// Lives at the start of the current round, restored if the round is discarded by a quit.
+    private var livesAtRoundStart: Int
 
     public init(pack: ContentPack, configuration: RunConfiguration = .standard, seed: UInt64) {
         self.pack = pack
@@ -27,7 +29,10 @@ public struct RunState: Sendable, Equatable {
         self.seed = seed
         var generator = SeededGenerator(seed: seed)
         self.plans = RoundPlanner.plan(pack: pack, configuration: configuration, using: &generator)
+        precondition(configuration.roundCount > 0, "A run needs at least one round")
+        precondition(configuration.streakStep > 0 && configuration.scoring.multiplierStep > 0, "Streak steps must be positive")
         self.lives = configuration.startingLives
+        self.livesAtRoundStart = configuration.startingLives
     }
 
     public var currentPlan: RoundPlan { plans[roundIndex] }
@@ -113,8 +118,11 @@ public struct RunState: Sendable, Equatable {
             return []
 
         case (_, .quit):
+            // The round in progress is discarded entirely, so its points and lost lives go with it.
             currentRoundItems = []
             sequencer = nil
+            score = completedRounds.reduce(0) { $0 + $1.score }
+            lives = livesAtRoundStart
             return finish(reason: .quit)
 
         default:
@@ -145,6 +153,7 @@ public struct RunState: Sendable, Equatable {
         shownCategories = []
         streak = 0
         currentRoundItems = []
+        livesAtRoundStart = lives
         roundResumedAt = now
         roundElapsedBeforeResume = .zero
         var effects: [RunEffect] = [.roundStarted(plan), .feedback(.roundStarted)]

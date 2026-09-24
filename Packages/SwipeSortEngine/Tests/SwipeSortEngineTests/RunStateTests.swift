@@ -11,7 +11,7 @@ import Testing
         #expect(h.state.score == 0)
     }
 
-    @Test func startRoundShowsFirstItemWithFullWindow() throws {
+    @Test func startRoundShowsFirstItemWithGracedWindow() throws {
         var h = RunHarness()
         h.send(.startRun)
         let produced = h.send(.startRound, after: .seconds(1))

@@ -829,7 +829,7 @@ public struct ScoringRules: Sendable, Equatable {
     /// The multiplier steps up on every multiple of `multiplierStep`, so the fifth
     /// consecutive correct answer is the first to score double.
     public func multiplier(streak: Int) -> Int {
-        guard streak >= 1 else { return 1 }
+        guard streak >= 1, multiplierStep > 0 else { return 1 }
         return min(maximumMultiplier, 1 + streak / multiplierStep)
     }
 
@@ -875,6 +875,7 @@ git commit -m "feat(engine): run configuration with window schedule and scoring 
 `Packages/SwipeSortEngine/Tests/SwipeSortEngineTests/RoundPlannerTests.swift`:
 
 ```swift
+import Foundation
 import Testing
 @testable import SwipeSortEngine
 
@@ -938,6 +939,28 @@ import Testing
         #expect(result[4].activeCategoryIDs.count == 4)
     }
 
+    @Test func categoryCountNeverExceedsTheFourEdges() {
+        var pack = ContentPack.shapesAndColours
+        pack.dimensions[0].values.append(CategoryValue(id: "purple", labelKey: "colour.purple", hintKey: nil))
+        pack.items.append(Item(id: "purple-circle", attributes: ["colour": "purple", "shape": "circle"], visual: .shape(kind: .circle, colour: "#CC79A7")))
+        var config = RunConfiguration.standard
+        config.categoryRamp = [5]
+        let result = plans(pack: pack, config: config)
+        for plan in result where plan.dimensionID == "colour" {
+            #expect(plan.activeCategoryIDs.count == 4)
+            #expect(plan.mapping.categoryByEdge.count == 4)
+        }
+    }
+
+    @Test func roundPlanDecodesWithoutBackDepth() throws {
+        let plan = plans()[0]
+        var object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(plan)) as! [String: Any]
+        object.removeValue(forKey: "backDepth")
+        let decoded = try JSONDecoder().decode(RoundPlan.self, from: JSONSerialization.data(withJSONObject: object))
+        #expect(decoded.backDepth == 0)
+        #expect(decoded.itemSeed == plan.itemSeed)
+    }
+
     @Test func mappingLookupsAreConsistent() {
         let mapping = EdgeMapping(categoryByEdge: [.left: "red", .right: "blue"])
         #expect(mapping.category(at: .left) == "red")
@@ -999,7 +1022,7 @@ public struct EdgeMapping: Codable, Sendable, Equatable {
 `Packages/SwipeSortEngine/Sources/SwipeSortEngine/RoundPlanner.swift`:
 
 ```swift
-public struct RoundPlan: Codable, Sendable, Equatable {
+public struct RoundPlan: Sendable, Equatable {
     public var index: Int
     public var dimensionID: String
     public var activeCategoryIDs: [String]
@@ -1020,13 +1043,39 @@ public struct RoundPlan: Codable, Sendable, Equatable {
     }
 }
 
+extension RoundPlan: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case index, dimensionID, activeCategoryIDs, mapping, itemSeed, backDepth
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        index = try c.decode(Int.self, forKey: .index)
+        dimensionID = try c.decode(String.self, forKey: .dimensionID)
+        activeCategoryIDs = try c.decode([String].self, forKey: .activeCategoryIDs)
+        mapping = try c.decode(EdgeMapping.self, forKey: .mapping)
+        itemSeed = try c.decode(UInt64.self, forKey: .itemSeed)
+        backDepth = try c.decodeIfPresent(Int.self, forKey: .backDepth) ?? 0
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(index, forKey: .index)
+        try c.encode(dimensionID, forKey: .dimensionID)
+        try c.encode(activeCategoryIDs, forKey: .activeCategoryIDs)
+        try c.encode(mapping, forKey: .mapping)
+        try c.encode(itemSeed, forKey: .itemSeed)
+        try c.encode(backDepth, forKey: .backDepth)
+    }
+}
+
 public enum RoundPlanner {
     /// Builds every round of a run up front so the whole run is determined by the seed.
     public static func plan(pack: ContentPack, configuration: RunConfiguration, using rng: inout SeededGenerator) -> [RoundPlan] {
         precondition(!pack.dimensions.isEmpty, "A pack needs at least one dimension")
         return (0..<configuration.roundCount).map { index in
             let dimension = pack.dimensions[index % pack.dimensions.count]
-            let count = min(configuration.categoryCount(roundIndex: index), dimension.values.count)
+            let count = min(configuration.categoryCount(roundIndex: index), dimension.values.count, SwipeEdge.allCases.count)
             let active = Array(dimension.values.map(\.id).shuffled(using: &rng).prefix(count))
             let edges = SwipeEdge.edges(forCategoryCount: count).shuffled(using: &rng)
             var categoryByEdge: [SwipeEdge: String] = [:]
@@ -1312,11 +1361,11 @@ public struct ItemResult: Sendable, Equatable {
     public var dimensionID: String
     public var attributes: [String: String]
     public var expectedCategoryID: String
-    /// Nil for a timeout.
+    /// Nil for a timeout or a held item.
     public var answeredCategoryID: String?
     public var correct: Bool
     public var timedOut: Bool
-    /// Nil for a timeout.
+    /// Nil for a timeout or a held item.
     public var reaction: Duration?
     public var window: Duration
     public var points: Int
@@ -1664,7 +1713,7 @@ import Testing
         #expect(h.state.score == 0)
     }
 
-    @Test func startRoundShowsFirstItemWithFullWindow() throws {
+    @Test func startRoundShowsFirstItemWithGracedWindow() throws {
         var h = RunHarness()
         h.send(.startRun)
         let produced = h.send(.startRound, after: .seconds(1))
@@ -1977,6 +2026,8 @@ public struct RunState: Sendable, Equatable {
     private var shownCategories: [String] = []
     private var roundResumedAt: Duration = .zero
     private var roundElapsedBeforeResume: Duration = .zero
+    /// Lives at the start of the current round, restored if the round is discarded by a quit.
+    private var livesAtRoundStart: Int
 
     public init(pack: ContentPack, configuration: RunConfiguration = .standard, seed: UInt64) {
         self.pack = pack
@@ -1984,7 +2035,10 @@ public struct RunState: Sendable, Equatable {
         self.seed = seed
         var generator = SeededGenerator(seed: seed)
         self.plans = RoundPlanner.plan(pack: pack, configuration: configuration, using: &generator)
+        precondition(configuration.roundCount > 0, "A run needs at least one round")
+        precondition(configuration.streakStep > 0 && configuration.scoring.multiplierStep > 0, "Streak steps must be positive")
         self.lives = configuration.startingLives
+        self.livesAtRoundStart = configuration.startingLives
     }
 
     public var currentPlan: RoundPlan { plans[roundIndex] }
@@ -2070,8 +2124,11 @@ public struct RunState: Sendable, Equatable {
             return []
 
         case (_, .quit):
+            // The round in progress is discarded entirely, so its points and lost lives go with it.
             currentRoundItems = []
             sequencer = nil
+            score = completedRounds.reduce(0) { $0 + $1.score }
+            lives = livesAtRoundStart
             return finish(reason: .quit)
 
         default:
@@ -2102,6 +2159,7 @@ public struct RunState: Sendable, Equatable {
         shownCategories = []
         streak = 0
         currentRoundItems = []
+        livesAtRoundStart = lives
         roundResumedAt = now
         roundElapsedBeforeResume = .zero
         var effects: [RunEffect] = [.roundStarted(plan), .feedback(.roundStarted)]
@@ -2409,7 +2467,8 @@ import Testing
         #expect(!summary.completed)
         #expect(summary.rounds.count == 1)
         #expect(summary.rounds[0].index == 0)
-        #expect(summary.livesRemaining == 2)
+        #expect(summary.livesRemaining == 3, "the discarded round's lost life goes with it")
+        #expect(summary.score == summary.rounds[0].score, "the discarded round's points go with it")
         #expect(produced.contains(.runEnded(summary)))
         #expect(!h.contains(.runEnded, in: produced), "quit is silent: no run-end haptic or sting")
         #expect(h.send(.tick, after: .seconds(1)).isEmpty)
@@ -2801,7 +2860,7 @@ public enum DailySeed {
     /// "yyyy-MM-dd" in the given calendar's time zone.
     public static func dayKey(for date: Date, calendar: Calendar = .current) -> String {
         let components = calendar.dateComponents([.year, .month, .day], from: date)
-        return String(format: "%04d-%02d-%02d", components.year ?? 0, components.month ?? 0, components.day ?? 0)
+        return String(format: "%04ld-%02ld-%02ld", components.year ?? 0, components.month ?? 0, components.day ?? 0)
     }
 
     /// FNV-1a 64-bit hash of the day key.
