@@ -121,6 +121,26 @@
         }
       }
     },
+    "pack.gonogo": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go, no-go"
+          }
+        }
+      }
+    },
+    "pack.gonogo.description": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sort everything except the dotted ones"
+          }
+        }
+      }
+    },
     "pack.shapes-colours": {
       "localizations": {
         "en": {

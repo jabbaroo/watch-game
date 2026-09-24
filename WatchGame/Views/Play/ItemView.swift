@@ -6,6 +6,8 @@ struct ItemView: View {
     var visual: Visual
     var hint: String?
     var size: CGFloat
+    /// Go, no-go: draws the hold mark, a dot with a contrasting ring, at the centre of the item.
+    var hold: Bool = false
 
     var body: some View {
         ZStack {
@@ -31,6 +33,13 @@ struct ItemView: View {
                 Text(hint)
                     .font(.system(size: size * 0.42, weight: .heavy, design: .rounded))
                     .foregroundStyle(.black.opacity(0.75))
+                    .accessibilityHidden(true)
+            }
+            if hold {
+                Circle()
+                    .fill(.black)
+                    .frame(width: size * 0.22, height: size * 0.22)
+                    .overlay(Circle().stroke(.white, lineWidth: max(2, size * 0.04)))
                     .accessibilityHidden(true)
             }
         }
@@ -101,5 +110,6 @@ extension Color {
         ItemView(visual: .shape(kind: .star, colour: "#F0E442"), hint: "Y", size: 60)
         ItemView(visual: .shape(kind: .triangle, colour: "#0072B2"), hint: nil, size: 60)
         ItemView(visual: .word(textKey: "colour.red", colour: "#0072B2"), hint: nil, size: 60)
+        ItemView(visual: .shape(kind: .circle, colour: "#009E73"), hint: nil, size: 60, hold: true)
     }
 }

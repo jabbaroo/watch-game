@@ -280,6 +280,20 @@ import Testing
         #expect(ContentPack.shapesAndColours.descriptionKey == "pack.shapes-colours.description")
     }
 
+    @Test func holdProbabilityDefaultsToZeroAndIsValidated() throws {
+        let plain = try JSONDecoder().decode(ContentPack.self, from: Data(Self.miniJSON.utf8))
+        #expect(plain.holdProbability == 0)
+        let goNoGo = Self.miniJSON.replacingOccurrences(of: "\"nameKey\": \"pack.mini\",", with: "\"nameKey\": \"pack.mini\", \"holdProbability\": 0.25,")
+        let decoded = try JSONDecoder().decode(ContentPack.self, from: Data(goNoGo.utf8))
+        #expect(decoded.holdProbability == 0.25)
+        try decoded.validate()
+        let reencoded = try JSONDecoder().decode(ContentPack.self, from: JSONEncoder().encode(decoded))
+        #expect(reencoded == decoded)
+        var tooHigh = decoded
+        tooHigh.holdProbability = 0.95
+        #expect(throws: ContentPack.ValidationError.invalidHoldProbability(0.95)) { try tooHigh.validate() }
+    }
+
     @Test func unknownVisualTypeFailsToDecode() {
         let json = #"{"type":"hologram"}"#
         #expect(throws: DecodingError.self) {
@@ -343,18 +357,21 @@ Expected: compile errors about `ContentPack`, `Visual`, `CategoryValue`.
 import Foundation
 
 /// A sortable set of items with one or more dimensions to sort them by.
-public struct ContentPack: Codable, Sendable, Equatable, Identifiable {
+public struct ContentPack: Sendable, Equatable, Identifiable {
     public var id: String
     public var nameKey: String
     /// Optional String Catalog key for a one-line description shown in the mode picker.
     public var descriptionKey: String?
+    /// Go, no-go: the share of items shown as "hold" items that must be left alone. Zero for plain sorting.
+    public var holdProbability: Double
     public var dimensions: [Dimension]
     public var items: [Item]
 
-    public init(id: String, nameKey: String, descriptionKey: String? = nil, dimensions: [Dimension], items: [Item]) {
+    public init(id: String, nameKey: String, descriptionKey: String? = nil, holdProbability: Double = 0, dimensions: [Dimension], items: [Item]) {
         self.id = id
         self.nameKey = nameKey
         self.descriptionKey = descriptionKey
+        self.holdProbability = holdProbability
         self.dimensions = dimensions
         self.items = items
     }
@@ -366,6 +383,7 @@ public struct ContentPack: Codable, Sendable, Equatable, Identifiable {
     public enum ValidationError: Error, Equatable, Sendable {
         case noDimensions
         case noItems
+        case invalidHoldProbability(Double)
         case duplicateID(String)
         case dimensionNeedsTwoValues(String)
         case itemMissingAttribute(item: String, dimension: String)
@@ -378,6 +396,7 @@ public struct ContentPack: Codable, Sendable, Equatable, Identifiable {
     public func validate() throws(ValidationError) {
         guard !dimensions.isEmpty else { throw ValidationError.noDimensions }
         guard !items.isEmpty else { throw ValidationError.noItems }
+        guard (0...0.9).contains(holdProbability) else { throw ValidationError.invalidHoldProbability(holdProbability) }
 
         var dimensionIDs = Set<String>()
         for dimension in dimensions {
@@ -416,6 +435,34 @@ public struct ContentPack: Codable, Sendable, Equatable, Identifiable {
                 throw ValidationError.valueWithoutItems(dimension: dimension.id, value: value.id)
             }
         }
+    }
+}
+
+extension ContentPack: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case id, nameKey, descriptionKey, holdProbability, dimensions, items
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        nameKey = try container.decode(String.self, forKey: .nameKey)
+        descriptionKey = try container.decodeIfPresent(String.self, forKey: .descriptionKey)
+        holdProbability = try container.decodeIfPresent(Double.self, forKey: .holdProbability) ?? 0
+        dimensions = try container.decode([Dimension].self, forKey: .dimensions)
+        items = try container.decode([Item].self, forKey: .items)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(nameKey, forKey: .nameKey)
+        try container.encodeIfPresent(descriptionKey, forKey: .descriptionKey)
+        if holdProbability > 0 {
+            try container.encode(holdProbability, forKey: .holdProbability)
+        }
+        try container.encode(dimensions, forKey: .dimensions)
+        try container.encode(items, forKey: .items)
     }
 }
 
@@ -779,6 +826,11 @@ public struct ScoringRules: Sendable, Equatable {
     public func points(streak: Int, reaction: Duration, window: Duration) -> Int {
         basePoints * multiplier(streak: streak) + speedBonus(reaction: reaction, window: window)
     }
+
+    /// Points for leaving a hold item alone: base times multiplier, no speed bonus.
+    public func pointsForHold(streak: Int) -> Int {
+        basePoints * multiplier(streak: streak)
+    }
 }
 ```
 
@@ -1013,7 +1065,7 @@ import Testing
         )
     }
 
-    func drawItems(_ count: Int, plan: RoundPlan, maxRun: Int = 2) -> [(item: Item, categoryID: String)] {
+    func drawItems(_ count: Int, plan: RoundPlan, maxRun: Int = 2) -> [(item: Item, categoryID: String, hold: Bool)] {
         var sequencer = ItemSequencer(pack: pack, plan: plan, maximumConsecutiveSameTarget: maxRun)
         return (0..<count).map { _ in sequencer.next() }
     }
@@ -1055,6 +1107,17 @@ import Testing
         #expect(drawItems(30, plan: a).map(\.item.id) != drawItems(30, plan: b).map(\.item.id))
     }
 
+    @Test func holdItemsFollowThePackProbability() {
+        var goNoGo = pack
+        goNoGo.holdProbability = 0.25
+        let plan = makePlan(categories: ["red", "blue"])
+        var sequencer = ItemSequencer(pack: goNoGo, plan: plan, maximumConsecutiveSameTarget: 2)
+        let holds = (0..<400).filter { _ in sequencer.next().hold }.count
+        #expect((60...140).contains(holds), "about a quarter of 400 draws, got \(holds)")
+        var plain = ItemSequencer(pack: pack, plan: plan, maximumConsecutiveSameTarget: 2)
+        #expect((0..<100).allSatisfy { _ in !plain.next().hold })
+    }
+
     @Test func singleCategoryAllowsRepeats() {
         let plan = makePlan(categories: ["red"])
         let targets = drawItems(10, plan: plan).map(\.categoryID)
@@ -1079,12 +1142,14 @@ public struct ItemSequencer: Sendable, Equatable {
     private let categories: [String]
     private let candidatesByCategory: [String: [Item]]
     private let maximumConsecutiveSameTarget: Int
+    private let holdProbability: Double
     private var generator: SeededGenerator
     private var lastTarget: String?
     private var consecutive = 0
 
     public init(pack: ContentPack, plan: RoundPlan, maximumConsecutiveSameTarget: Int) {
         generator = SeededGenerator(seed: plan.itemSeed)
+        holdProbability = pack.holdProbability
         categories = plan.activeCategoryIDs
         var candidates: [String: [Item]] = [:]
         for item in pack.items {
@@ -1096,9 +1161,10 @@ public struct ItemSequencer: Sendable, Equatable {
         self.maximumConsecutiveSameTarget = max(1, maximumConsecutiveSameTarget)
     }
 
-    /// The next item and the category it must be sorted into. Picks the target category
-    /// first, then uniformly among the pack's items with that value on the active dimension.
-    public mutating func next() -> (item: Item, categoryID: String) {
+    /// The next item, the category it belongs to, and whether it is a hold item that must be
+    /// left alone. Picks the target category first, then uniformly among the pack's items with
+    /// that value on the active dimension, then draws the hold flag from the pack's probability.
+    public mutating func next() -> (item: Item, categoryID: String, hold: Bool) {
         var pool = categories
         if let last = lastTarget, consecutive >= maximumConsecutiveSameTarget, categories.count > 1 {
             pool.removeAll { $0 == last }
@@ -1114,7 +1180,8 @@ public struct ItemSequencer: Sendable, Equatable {
             lastTarget = target
             consecutive = 1
         }
-        return (item, target)
+        let hold = holdProbability > 0 && Double.random(in: 0..<1, using: &generator) < holdProbability
+        return (item, target, hold)
     }
 }
 ```
@@ -1180,6 +1247,19 @@ import Testing
         let data = try JSONEncoder().encode(summary)
         #expect(try JSONDecoder().decode(RunSummary.self, from: data) == summary)
     }
+
+    @Test func itemResultDecodesWithoutTheHoldKey() throws {
+        let legacy = """
+        {"roundIndex":0,"itemIndex":1,"dimensionID":"colour","attributes":{"colour":"red"},"expectedCategoryID":"red",
+         "answeredCategoryID":"red","correct":true,"timedOut":false,"reaction":[0,500000000000000000],"window":[2,0],"points":100}
+        """
+        let item = try JSONDecoder().decode(ItemResult.self, from: Data(legacy.utf8))
+        #expect(item.hold == false)
+        #expect(item.reaction == .milliseconds(500))
+        var held = item
+        held.hold = true
+        #expect(try JSONDecoder().decode(ItemResult.self, from: JSONEncoder().encode(held)).hold)
+    }
 }
 ```
 
@@ -1194,7 +1274,7 @@ Expected: compile errors for `RoundResult`, `RunSummary`, `ItemResult`.
 
 ```swift
 /// One resolved item. Produced by the engine, persisted by the app.
-public struct ItemResult: Codable, Sendable, Equatable {
+public struct ItemResult: Sendable, Equatable {
     public var roundIndex: Int
     public var itemIndex: Int
     public var dimensionID: String
@@ -1208,10 +1288,12 @@ public struct ItemResult: Codable, Sendable, Equatable {
     public var reaction: Duration?
     public var window: Duration
     public var points: Int
+    /// Go, no-go: the item was a hold item. Correct means it was left alone; incorrect means a false alarm.
+    public var hold: Bool
 
     public init(roundIndex: Int, itemIndex: Int, dimensionID: String, attributes: [String: String],
                 expectedCategoryID: String, answeredCategoryID: String?, correct: Bool, timedOut: Bool,
-                reaction: Duration?, window: Duration, points: Int) {
+                reaction: Duration?, window: Duration, points: Int, hold: Bool = false) {
         self.roundIndex = roundIndex
         self.itemIndex = itemIndex
         self.dimensionID = dimensionID
@@ -1223,6 +1305,46 @@ public struct ItemResult: Codable, Sendable, Equatable {
         self.reaction = reaction
         self.window = window
         self.points = points
+        self.hold = hold
+    }
+}
+
+extension ItemResult: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case roundIndex, itemIndex, dimensionID, attributes, expectedCategoryID, answeredCategoryID
+        case correct, timedOut, reaction, window, points, hold
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        roundIndex = try c.decode(Int.self, forKey: .roundIndex)
+        itemIndex = try c.decode(Int.self, forKey: .itemIndex)
+        dimensionID = try c.decode(String.self, forKey: .dimensionID)
+        attributes = try c.decode([String: String].self, forKey: .attributes)
+        expectedCategoryID = try c.decode(String.self, forKey: .expectedCategoryID)
+        answeredCategoryID = try c.decodeIfPresent(String.self, forKey: .answeredCategoryID)
+        correct = try c.decode(Bool.self, forKey: .correct)
+        timedOut = try c.decode(Bool.self, forKey: .timedOut)
+        reaction = try c.decodeIfPresent(Duration.self, forKey: .reaction)
+        window = try c.decode(Duration.self, forKey: .window)
+        points = try c.decode(Int.self, forKey: .points)
+        hold = try c.decodeIfPresent(Bool.self, forKey: .hold) ?? false
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(roundIndex, forKey: .roundIndex)
+        try c.encode(itemIndex, forKey: .itemIndex)
+        try c.encode(dimensionID, forKey: .dimensionID)
+        try c.encode(attributes, forKey: .attributes)
+        try c.encode(expectedCategoryID, forKey: .expectedCategoryID)
+        try c.encodeIfPresent(answeredCategoryID, forKey: .answeredCategoryID)
+        try c.encode(correct, forKey: .correct)
+        try c.encode(timedOut, forKey: .timedOut)
+        try c.encodeIfPresent(reaction, forKey: .reaction)
+        try c.encode(window, forKey: .window)
+        try c.encode(points, forKey: .points)
+        try c.encode(hold, forKey: .hold)
     }
 }
 
@@ -1294,8 +1416,10 @@ public struct ActiveItem: Sendable, Equatable {
     public var shownAt: Duration
     public var deadline: Duration
     public var window: Duration
+    /// Go, no-go: a hold item must be left alone until its window closes.
+    public var isHold: Bool
 
-    public init(index: Int, item: Item, expectedCategoryID: String, expectedEdge: SwipeEdge, shownAt: Duration, deadline: Duration, window: Duration) {
+    public init(index: Int, item: Item, expectedCategoryID: String, expectedEdge: SwipeEdge, shownAt: Duration, deadline: Duration, window: Duration, isHold: Bool = false) {
         self.index = index
         self.item = item
         self.expectedCategoryID = expectedCategoryID
@@ -1303,6 +1427,7 @@ public struct ActiveItem: Sendable, Equatable {
         self.shownAt = shownAt
         self.deadline = deadline
         self.window = window
+        self.isHold = isHold
     }
 }
 
@@ -1310,6 +1435,10 @@ public enum ItemOutcome: Sendable, Equatable {
     case correct(points: Int, streak: Int)
     case wrong
     case timedOut
+    /// A hold item left alone until its window closed: correct, scored without a speed bonus.
+    case held(points: Int, streak: Int)
+    /// A hold item that was flicked: wrong, costs a life.
+    case falseAlarm
 }
 
 /// The engine says when feedback happens; the app's services decide what it feels and sounds like.
@@ -1921,7 +2050,8 @@ public struct RunState: Sendable, Equatable {
             expectedEdge: edge,
             shownAt: now,
             deadline: now + window,
-            window: window
+            window: window,
+            isHold: draw.hold
         )
         nextItemIndex += 1
         phase = .playing(active)
@@ -1930,21 +2060,37 @@ public struct RunState: Sendable, Equatable {
 
     private mutating func resolve(_ active: ActiveItem, answeredEdge: SwipeEdge?, at now: Duration) -> [RunEffect] {
         let plan = currentPlan
-        let timedOut = answeredEdge == nil
-        let correct = answeredEdge == active.expectedEdge
-        let reaction: Duration? = timedOut ? nil : now - active.shownAt
+        let answered = answeredEdge != nil
+        let reaction: Duration? = answered ? now - active.shownAt : nil
         var points = 0
         let outcome: ItemOutcome
+        let correct: Bool
 
-        if correct, let reaction {
-            streak += 1
-            points = configuration.scoring.points(streak: streak, reaction: reaction, window: active.window)
-            score += points
-            outcome = .correct(points: points, streak: streak)
+        if active.isHold {
+            // Go, no-go: leaving the item alone is right, flicking it is a false alarm.
+            correct = !answered
+            if correct {
+                streak += 1
+                points = configuration.scoring.pointsForHold(streak: streak)
+                score += points
+                outcome = .held(points: points, streak: streak)
+            } else {
+                streak = 0
+                lives -= 1
+                outcome = .falseAlarm
+            }
         } else {
-            streak = 0
-            lives -= 1
-            outcome = timedOut ? .timedOut : .wrong
+            correct = answeredEdge == active.expectedEdge
+            if correct, let reaction {
+                streak += 1
+                points = configuration.scoring.points(streak: streak, reaction: reaction, window: active.window)
+                score += points
+                outcome = .correct(points: points, streak: streak)
+            } else {
+                streak = 0
+                lives -= 1
+                outcome = answered ? .wrong : .timedOut
+            }
         }
 
         let result = ItemResult(
@@ -1955,16 +2101,17 @@ public struct RunState: Sendable, Equatable {
             expectedCategoryID: active.expectedCategoryID,
             answeredCategoryID: answeredEdge.flatMap { plan.mapping.category(at: $0) },
             correct: correct,
-            timedOut: timedOut,
+            timedOut: !answered && !active.isHold,
             reaction: reaction,
             window: active.window,
-            points: points
+            points: points,
+            hold: active.isHold
         )
         currentRoundItems.append(result)
 
         var effects: [RunEffect] = [.itemResolved(result, outcome)]
         switch outcome {
-        case .correct:
+        case .correct, .held:
             effects.append(.scoreChanged(score))
             let every = configuration.streakStep
             if every > 0, streak % every == 0 {
@@ -1972,7 +2119,7 @@ public struct RunState: Sendable, Equatable {
             } else {
                 effects.append(.feedback(.correct(streak: streak)))
             }
-        case .wrong:
+        case .wrong, .falseAlarm:
             effects.append(.livesChanged(lives))
             effects.append(.feedback(.wrong))
         case .timedOut:
@@ -2428,8 +2575,12 @@ public struct ConfusionPair: Sendable, Hashable {
 public struct RunStatistics: Sendable, Equatable {
     public var resolvedCount: Int
     public var correctCount: Int
+    /// Wrong flicks on items that should have been sorted. False alarms are counted separately.
     public var wrongSwipeCount: Int
     public var timeoutCount: Int
+    /// Go, no-go: how many hold items appeared and how many were flicked by mistake.
+    public var holdCount: Int
+    public var falseAlarmCount: Int
     /// In the order dimensions were first played.
     public var errorsByDimension: [DimensionErrorRate]
     /// Sorted by count descending, then expected id, then answered id.
@@ -2448,11 +2599,18 @@ public struct RunStatistics: Sendable, Equatable {
         resolvedCount > 0 ? Double(correctCount) / Double(resolvedCount) : nil
     }
 
+    /// Share of hold items that were flicked. Nil when the run had no hold items.
+    public var falseAlarmRate: Double? {
+        holdCount > 0 ? Double(falseAlarmCount) / Double(holdCount) : nil
+    }
+
     public static func compute(rounds: [RoundResult], leadingItemCount: Int = 3, minimumCorrectItems: Int = 6, minimumConflictItems: Int = 3) -> RunStatistics {
         let items = rounds.flatMap(\.items)
         let correct = items.filter(\.correct)
-        let wrong = items.filter { !$0.correct && !$0.timedOut }
+        let wrong = items.filter { !$0.correct && !$0.timedOut && !$0.hold }
         let timeouts = items.filter(\.timedOut)
+        let holds = items.filter(\.hold)
+        let falseAlarms = holds.filter { !$0.correct }
 
         var dimensionOrder: [String] = []
         var errorsByDimension: [String: DimensionErrorRate] = [:]
@@ -2503,6 +2661,8 @@ public struct RunStatistics: Sendable, Equatable {
             correctCount: correct.count,
             wrongSwipeCount: wrong.count,
             timeoutCount: timeouts.count,
+            holdCount: holds.count,
+            falseAlarmCount: falseAlarms.count,
             errorsByDimension: dimensionOrder.compactMap { errorsByDimension[$0] },
             confusionPairs: confusionPairs,
             meanReaction: mean(correct.compactMap(\.reaction)),
@@ -3596,6 +3756,14 @@ private final class TestBundleMarker {}
         }
     }
 
+    @Test func goNoGoPackHoldsAQuarterOfItems() throws {
+        let pack = try #require(PackLoader.loadPacks(from: .main).first { $0.id == "gonogo" })
+        #expect(pack.holdProbability == 0.25)
+        #expect(pack.items.count == 16)
+        #expect(pack.dimensions.map(\.id) == ["colour", "shape"])
+        #expect(ContentPack.shapesAndColours.holdProbability == 0)
+    }
+
     @Test func stroopPackSharesValueIDsAcrossDimensions() throws {
         let stroop = try #require(PackLoader.loadPacks(from: .main).first { $0.id == "stroop" })
         #expect(stroop.items.count == 16)
@@ -3833,6 +4001,26 @@ Replace `WatchGame/Localizable.xcstrings` with:
         }
       }
     },
+    "pack.gonogo": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go, no-go"
+          }
+        }
+      }
+    },
+    "pack.gonogo.description": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sort everything except the dotted ones"
+          }
+        }
+      }
+    },
     "pack.shapes-colours": {
       "localizations": {
         "en": {
@@ -3964,8 +4152,14 @@ import SwipeSortEngine
                    reaction: .milliseconds(450), window: .seconds(2), points: correct ? 100 : 0)
     }
 
+    func held(_ index: Int) -> ItemResult {
+        ItemResult(roundIndex: 0, itemIndex: index, dimensionID: "colour", attributes: ["colour": "blue", "shape": "circle"],
+                   expectedCategoryID: "blue", answeredCategoryID: nil, correct: true, timedOut: false,
+                   reaction: nil, window: .seconds(2), points: 100, hold: true)
+    }
+
     func round(_ index: Int, score: Int = 200, cutShort: Bool = false) -> RoundResult {
-        RoundResult(index: index, dimensionID: "colour", categoryCount: 2, perfect: false, cutShort: cutShort, score: score, items: [item(0), item(1, correct: false)])
+        RoundResult(index: index, dimensionID: "colour", categoryCount: 2, perfect: false, cutShort: cutShort, score: score, items: [item(0), item(1, correct: false), held(2)])
     }
 
     func summary(score: Int, rounds: [RoundResult], reason: RunEndReason = .completedAllRounds) -> RunSummary {
@@ -4148,6 +4342,7 @@ final class ItemEntry {
     var reactionMilliseconds: Int?
     var windowMilliseconds: Int = 0
     var points: Int = 0
+    var hold: Bool = false
     var round: RoundEntry?
 
     init(result: ItemResult) {
@@ -4162,6 +4357,7 @@ final class ItemEntry {
         reactionMilliseconds = result.reaction.map(Self.milliseconds)
         windowMilliseconds = Self.milliseconds(result.window)
         points = result.points
+        hold = result.hold
     }
 
     var result: ItemResult {
@@ -4176,7 +4372,8 @@ final class ItemEntry {
             timedOut: timedOut,
             reaction: reactionMilliseconds.map { .milliseconds($0) },
             window: .milliseconds(windowMilliseconds),
-            points: points
+            points: points,
+            hold: hold
         )
     }
 
@@ -5323,6 +5520,8 @@ struct ItemView: View {
     var visual: Visual
     var hint: String?
     var size: CGFloat
+    /// Go, no-go: draws the hold mark, a dot with a contrasting ring, at the centre of the item.
+    var hold: Bool = false
 
     var body: some View {
         ZStack {
@@ -5348,6 +5547,13 @@ struct ItemView: View {
                 Text(hint)
                     .font(.system(size: size * 0.42, weight: .heavy, design: .rounded))
                     .foregroundStyle(.black.opacity(0.75))
+                    .accessibilityHidden(true)
+            }
+            if hold {
+                Circle()
+                    .fill(.black)
+                    .frame(width: size * 0.22, height: size * 0.22)
+                    .overlay(Circle().stroke(.white, lineWidth: max(2, size * 0.04)))
                     .accessibilityHidden(true)
             }
         }
@@ -5418,6 +5624,7 @@ extension Color {
         ItemView(visual: .shape(kind: .star, colour: "#F0E442"), hint: "Y", size: 60)
         ItemView(visual: .shape(kind: .triangle, colour: "#0072B2"), hint: nil, size: 60)
         ItemView(visual: .word(textKey: "colour.red", colour: "#0072B2"), hint: nil, size: 60)
+        ItemView(visual: .shape(kind: .circle, colour: "#009E73"), hint: nil, size: 60, hold: true)
     }
 }
 ```
@@ -5585,6 +5792,11 @@ struct RoundIntroView: View {
                 Text("Sort by \(session.dimensionName(for: plan))")
                     .font(.headline)
                     .multilineTextAlignment(.center)
+                if session.pack.holdProbability > 0 {
+                    Text("Hold the dotted ones")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
                 mappingPreview(plan)
                     .frame(height: 70)
                 HStack(spacing: 12) {
@@ -5812,11 +6024,11 @@ struct PlayView: View {
         if let active = session.activeItem {
             ZStack {
                 timerRing(for: active, size: itemSize + 18)
-                ItemView(visual: active.item.visual, hint: hint(for: active.item), size: itemSize)
+                ItemView(visual: active.item.visual, hint: hint(for: active.item), size: itemSize, hold: active.isHold)
             }
             .id(active.index)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(session.categoryLabel(active.expectedCategoryID, in: session.currentPlan)))
+            .accessibilityLabel(itemLabel(for: active))
             .accessibilityActions {
                 ForEach(session.currentPlan.mapping.edges, id: \.self) { edge in
                     Button(labels[edge] ?? edge.rawValue) { session.answer(edge) }
@@ -5850,6 +6062,11 @@ struct PlayView: View {
             result[edge] = session.categoryLabel(category, in: session.currentPlan)
         }
         return result
+    }
+
+    private func itemLabel(for active: ActiveItem) -> Text {
+        let category = session.categoryLabel(active.expectedCategoryID, in: session.currentPlan)
+        return active.isHold ? Text("\(category), hold") : Text(category)
     }
 
     private func hint(for item: Item) -> String? {
@@ -5886,7 +6103,9 @@ struct PlayView: View {
                 try? await Task.sleep(for: .milliseconds(250))
                 highlightedEdge = nil
             }
-        case .wrong, .timedOut:
+        case .held:
+            break
+        case .wrong, .timedOut, .falseAlarm:
             withAnimation(.easeOut(duration: 0.1)) { flashEdge = true }
             Task {
                 try? await Task.sleep(for: .milliseconds(180))
@@ -5905,7 +6124,7 @@ private struct OutcomeItemView: View {
     @State private var progress: CGFloat = 0
 
     var body: some View {
-        ItemView(visual: resolved.item.item.visual, hint: hint, size: size)
+        ItemView(visual: resolved.item.item.visual, hint: hint, size: size, hold: resolved.item.isHold)
             .modifier(OutcomeModifier(outcome: resolved.outcome, edge: resolved.item.expectedEdge,
                                       reduceMotion: reduceMotion, progress: progress))
             .onAppear {
@@ -5940,10 +6159,10 @@ private struct OutcomeModifier: ViewModifier, Animatable {
             let distance: CGFloat = reduceMotion ? 0 : 90 * progress
             return CGSize(width: edge == .left ? -distance : edge == .right ? distance : 0,
                           height: edge == .up ? -distance : edge == .down ? distance : 0)
-        case .wrong:
+        case .wrong, .falseAlarm:
             let shake: CGFloat = reduceMotion ? 0 : sin(progress * .pi * 4) * 8 * (1 - progress)
             return CGSize(width: shake, height: 0)
-        case .timedOut:
+        case .timedOut, .held:
             return .zero
         }
     }
@@ -5952,15 +6171,16 @@ private struct OutcomeModifier: ViewModifier, Animatable {
         guard !reduceMotion else { return 1 }
         switch outcome {
         case .correct: return 1 + 0.15 * progress
-        case .wrong: return 1
+        case .held: return 1 - 0.1 * progress
+        case .wrong, .falseAlarm: return 1
         case .timedOut: return 1 - 0.2 * progress
         }
     }
 
     private var opacity: Double {
         switch outcome {
-        case .correct, .timedOut: 1 - progress
-        case .wrong: 1 - progress * 0.6
+        case .correct, .timedOut, .held: 1 - progress
+        case .wrong, .falseAlarm: 1 - progress * 0.6
         }
     }
 }
@@ -6141,6 +6361,9 @@ struct StatisticsSections: View {
         Section("Errors") {
             row("Wrong swipes", value: "\(statistics.wrongSwipeCount)")
             row("Timeouts", value: "\(statistics.timeoutCount)")
+            if statistics.holdCount > 0 {
+                row("False alarms", value: "\(statistics.falseAlarmCount) of \(statistics.holdCount)")
+            }
             ForEach(statistics.errorsByDimension, id: \.dimensionID) { entry in
                 row(verbatim: dimensionName(entry.dimensionID), value: "\(entry.errors) of \(entry.total)")
             }
@@ -7058,6 +7281,11 @@ nonisolated final class PlayScreenScreenshotTests: XCTestCase {
     @MainActor
     func testCaptureStroopRound() {
         capture(named: "play-stroop", launchArguments: ["-settings.tapToSort", "NO", "-debugPack", "stroop", "-debugStartRound", "2"])
+    }
+
+    @MainActor
+    func testCaptureGoNoGoRound() {
+        capture(named: "play-gonogo", launchArguments: ["-settings.tapToSort", "NO", "-debugPack", "gonogo", "-debugStartRound", "3"])
     }
 
     @MainActor

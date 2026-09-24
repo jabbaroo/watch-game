@@ -28,8 +28,12 @@ public struct ConfusionPair: Sendable, Hashable {
 public struct RunStatistics: Sendable, Equatable {
     public var resolvedCount: Int
     public var correctCount: Int
+    /// Wrong flicks on items that should have been sorted. False alarms are counted separately.
     public var wrongSwipeCount: Int
     public var timeoutCount: Int
+    /// Go, no-go: how many hold items appeared and how many were flicked by mistake.
+    public var holdCount: Int
+    public var falseAlarmCount: Int
     /// In the order dimensions were first played.
     public var errorsByDimension: [DimensionErrorRate]
     /// Sorted by count descending, then expected id, then answered id.
@@ -48,11 +52,18 @@ public struct RunStatistics: Sendable, Equatable {
         resolvedCount > 0 ? Double(correctCount) / Double(resolvedCount) : nil
     }
 
+    /// Share of hold items that were flicked. Nil when the run had no hold items.
+    public var falseAlarmRate: Double? {
+        holdCount > 0 ? Double(falseAlarmCount) / Double(holdCount) : nil
+    }
+
     public static func compute(rounds: [RoundResult], leadingItemCount: Int = 3, minimumCorrectItems: Int = 6, minimumConflictItems: Int = 3) -> RunStatistics {
         let items = rounds.flatMap(\.items)
         let correct = items.filter(\.correct)
-        let wrong = items.filter { !$0.correct && !$0.timedOut }
+        let wrong = items.filter { !$0.correct && !$0.timedOut && !$0.hold }
         let timeouts = items.filter(\.timedOut)
+        let holds = items.filter(\.hold)
+        let falseAlarms = holds.filter { !$0.correct }
 
         var dimensionOrder: [String] = []
         var errorsByDimension: [String: DimensionErrorRate] = [:]
@@ -103,6 +114,8 @@ public struct RunStatistics: Sendable, Equatable {
             correctCount: correct.count,
             wrongSwipeCount: wrong.count,
             timeoutCount: timeouts.count,
+            holdCount: holds.count,
+            falseAlarmCount: falseAlarms.count,
             errorsByDimension: dimensionOrder.compactMap { errorsByDimension[$0] },
             confusionPairs: confusionPairs,
             meanReaction: mean(correct.compactMap(\.reaction)),

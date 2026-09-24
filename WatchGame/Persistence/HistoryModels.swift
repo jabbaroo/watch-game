@@ -90,6 +90,7 @@ final class ItemEntry {
     var reactionMilliseconds: Int?
     var windowMilliseconds: Int = 0
     var points: Int = 0
+    var hold: Bool = false
     var round: RoundEntry?
 
     init(result: ItemResult) {
@@ -104,6 +105,7 @@ final class ItemEntry {
         reactionMilliseconds = result.reaction.map(Self.milliseconds)
         windowMilliseconds = Self.milliseconds(result.window)
         points = result.points
+        hold = result.hold
     }
 
     var result: ItemResult {
@@ -118,7 +120,8 @@ final class ItemEntry {
             timedOut: timedOut,
             reaction: reactionMilliseconds.map { .milliseconds($0) },
             window: .milliseconds(windowMilliseconds),
-            points: points
+            points: points,
+            hold: hold
         )
     }
 

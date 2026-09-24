@@ -33,4 +33,17 @@ import Testing
         let data = try JSONEncoder().encode(summary)
         #expect(try JSONDecoder().decode(RunSummary.self, from: data) == summary)
     }
+
+    @Test func itemResultDecodesWithoutTheHoldKey() throws {
+        let legacy = """
+        {"roundIndex":0,"itemIndex":1,"dimensionID":"colour","attributes":{"colour":"red"},"expectedCategoryID":"red",
+         "answeredCategoryID":"red","correct":true,"timedOut":false,"reaction":[0,500000000000000000],"window":[2,0],"points":100}
+        """
+        let item = try JSONDecoder().decode(ItemResult.self, from: Data(legacy.utf8))
+        #expect(item.hold == false)
+        #expect(item.reaction == .milliseconds(500))
+        var held = item
+        held.hold = true
+        #expect(try JSONDecoder().decode(ItemResult.self, from: JSONEncoder().encode(held)).hold)
+    }
 }

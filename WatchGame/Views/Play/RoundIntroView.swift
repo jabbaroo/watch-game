@@ -22,6 +22,11 @@ struct RoundIntroView: View {
                 Text("Sort by \(session.dimensionName(for: plan))")
                     .font(.headline)
                     .multilineTextAlignment(.center)
+                if session.pack.holdProbability > 0 {
+                    Text("Hold the dotted ones")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
                 mappingPreview(plan)
                     .frame(height: 70)
                 HStack(spacing: 12) {

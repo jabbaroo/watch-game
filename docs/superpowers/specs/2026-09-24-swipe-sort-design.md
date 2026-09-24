@@ -341,9 +341,13 @@ Principle: every mode is a variant of the one flick loop the hand already knows.
 - Home gains a mode: Play starts the last-used pack and shows its name; a "Mode" row picks between packs when more than one is installed. The daily challenge keeps using the shapes pack.
 - Results and History show the pack name.
 
-### 13.2 Go, no-go (second)
+### 13.2 Go, no-go (built)
 
-Most items are sorted; items carrying a "hold" mark (a small dot) must be left alone until their window closes, and leaving them counts as a correct answer. Flicking a hold item is a false alarm and costs a life. Metrics: false-alarm rate and mean reaction time on go items. Needs one rule flag per round ("hold items with a dot"), a `hold` attribute on items, and an engine outcome for a correct non-response.
+- Any pack may carry `holdProbability` (0 to 0.9, default 0). The item sequencer draws each item's hold flag from the round's own generator, so seeded runs reproduce. The go, no-go pack ships as JSON: the shapes and colours items with a hold probability of 0.25.
+- A hold item shows a black dot with a white ring at its centre, and its VoiceOver label ends with "hold". The round intro adds "Hold the dotted ones" under the rule.
+- Leaving a hold item until its window closes is correct: it extends the streak and scores base points times the multiplier, with no speed bonus. Flicking it is a false alarm: it costs a life and resets the streak, like a wrong swipe. A held item is neither a timeout nor a wrong swipe in the statistics.
+- Metrics: false alarms out of hold items, shown on Results as "False alarms n of m"; mean reaction time is unaffected because held items have no reaction time.
+- The engine records `hold` on each item result; older persisted results decode with hold false.
 
 ### 13.3 Two-back (third)
 

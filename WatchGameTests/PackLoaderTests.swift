@@ -45,6 +45,14 @@ private final class TestBundleMarker {}
         }
     }
 
+    @Test func goNoGoPackHoldsAQuarterOfItems() throws {
+        let pack = try #require(PackLoader.loadPacks(from: .main).first { $0.id == "gonogo" })
+        #expect(pack.holdProbability == 0.25)
+        #expect(pack.items.count == 16)
+        #expect(pack.dimensions.map(\.id) == ["colour", "shape"])
+        #expect(ContentPack.shapesAndColours.holdProbability == 0)
+    }
+
     @Test func stroopPackSharesValueIDsAcrossDimensions() throws {
         let stroop = try #require(PackLoader.loadPacks(from: .main).first { $0.id == "stroop" })
         #expect(stroop.items.count == 16)

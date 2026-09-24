@@ -1,18 +1,21 @@
 import Foundation
 
 /// A sortable set of items with one or more dimensions to sort them by.
-public struct ContentPack: Codable, Sendable, Equatable, Identifiable {
+public struct ContentPack: Sendable, Equatable, Identifiable {
     public var id: String
     public var nameKey: String
     /// Optional String Catalog key for a one-line description shown in the mode picker.
     public var descriptionKey: String?
+    /// Go, no-go: the share of items shown as "hold" items that must be left alone. Zero for plain sorting.
+    public var holdProbability: Double
     public var dimensions: [Dimension]
     public var items: [Item]
 
-    public init(id: String, nameKey: String, descriptionKey: String? = nil, dimensions: [Dimension], items: [Item]) {
+    public init(id: String, nameKey: String, descriptionKey: String? = nil, holdProbability: Double = 0, dimensions: [Dimension], items: [Item]) {
         self.id = id
         self.nameKey = nameKey
         self.descriptionKey = descriptionKey
+        self.holdProbability = holdProbability
         self.dimensions = dimensions
         self.items = items
     }
@@ -24,6 +27,7 @@ public struct ContentPack: Codable, Sendable, Equatable, Identifiable {
     public enum ValidationError: Error, Equatable, Sendable {
         case noDimensions
         case noItems
+        case invalidHoldProbability(Double)
         case duplicateID(String)
         case dimensionNeedsTwoValues(String)
         case itemMissingAttribute(item: String, dimension: String)
@@ -36,6 +40,7 @@ public struct ContentPack: Codable, Sendable, Equatable, Identifiable {
     public func validate() throws(ValidationError) {
         guard !dimensions.isEmpty else { throw ValidationError.noDimensions }
         guard !items.isEmpty else { throw ValidationError.noItems }
+        guard (0...0.9).contains(holdProbability) else { throw ValidationError.invalidHoldProbability(holdProbability) }
 
         var dimensionIDs = Set<String>()
         for dimension in dimensions {
@@ -74,6 +79,34 @@ public struct ContentPack: Codable, Sendable, Equatable, Identifiable {
                 throw ValidationError.valueWithoutItems(dimension: dimension.id, value: value.id)
             }
         }
+    }
+}
+
+extension ContentPack: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case id, nameKey, descriptionKey, holdProbability, dimensions, items
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        nameKey = try container.decode(String.self, forKey: .nameKey)
+        descriptionKey = try container.decodeIfPresent(String.self, forKey: .descriptionKey)
+        holdProbability = try container.decodeIfPresent(Double.self, forKey: .holdProbability) ?? 0
+        dimensions = try container.decode([Dimension].self, forKey: .dimensions)
+        items = try container.decode([Item].self, forKey: .items)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(nameKey, forKey: .nameKey)
+        try container.encodeIfPresent(descriptionKey, forKey: .descriptionKey)
+        if holdProbability > 0 {
+            try container.encode(holdProbability, forKey: .holdProbability)
+        }
+        try container.encode(dimensions, forKey: .dimensions)
+        try container.encode(items, forKey: .items)
     }
 }
 

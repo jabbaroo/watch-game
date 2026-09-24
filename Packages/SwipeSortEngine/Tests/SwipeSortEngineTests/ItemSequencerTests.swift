@@ -15,7 +15,7 @@ import Testing
         )
     }
 
-    func drawItems(_ count: Int, plan: RoundPlan, maxRun: Int = 2) -> [(item: Item, categoryID: String)] {
+    func drawItems(_ count: Int, plan: RoundPlan, maxRun: Int = 2) -> [(item: Item, categoryID: String, hold: Bool)] {
         var sequencer = ItemSequencer(pack: pack, plan: plan, maximumConsecutiveSameTarget: maxRun)
         return (0..<count).map { _ in sequencer.next() }
     }
@@ -55,6 +55,17 @@ import Testing
         let b = makePlan(categories: ["red", "blue"], itemSeed: 12)
         #expect(drawItems(30, plan: a).map(\.item.id) == drawItems(30, plan: a).map(\.item.id))
         #expect(drawItems(30, plan: a).map(\.item.id) != drawItems(30, plan: b).map(\.item.id))
+    }
+
+    @Test func holdItemsFollowThePackProbability() {
+        var goNoGo = pack
+        goNoGo.holdProbability = 0.25
+        let plan = makePlan(categories: ["red", "blue"])
+        var sequencer = ItemSequencer(pack: goNoGo, plan: plan, maximumConsecutiveSameTarget: 2)
+        let holds = (0..<400).filter { _ in sequencer.next().hold }.count
+        #expect((60...140).contains(holds), "about a quarter of 400 draws, got \(holds)")
+        var plain = ItemSequencer(pack: pack, plan: plan, maximumConsecutiveSameTarget: 2)
+        #expect((0..<100).allSatisfy { _ in !plain.next().hold })
     }
 
     @Test func singleCategoryAllowsRepeats() {

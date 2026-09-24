@@ -62,6 +62,20 @@ import Testing
         #expect(ContentPack.shapesAndColours.descriptionKey == "pack.shapes-colours.description")
     }
 
+    @Test func holdProbabilityDefaultsToZeroAndIsValidated() throws {
+        let plain = try JSONDecoder().decode(ContentPack.self, from: Data(Self.miniJSON.utf8))
+        #expect(plain.holdProbability == 0)
+        let goNoGo = Self.miniJSON.replacingOccurrences(of: "\"nameKey\": \"pack.mini\",", with: "\"nameKey\": \"pack.mini\", \"holdProbability\": 0.25,")
+        let decoded = try JSONDecoder().decode(ContentPack.self, from: Data(goNoGo.utf8))
+        #expect(decoded.holdProbability == 0.25)
+        try decoded.validate()
+        let reencoded = try JSONDecoder().decode(ContentPack.self, from: JSONEncoder().encode(decoded))
+        #expect(reencoded == decoded)
+        var tooHigh = decoded
+        tooHigh.holdProbability = 0.95
+        #expect(throws: ContentPack.ValidationError.invalidHoldProbability(0.95)) { try tooHigh.validate() }
+    }
+
     @Test func unknownVisualTypeFailsToDecode() {
         let json = #"{"type":"hologram"}"#
         #expect(throws: DecodingError.self) {

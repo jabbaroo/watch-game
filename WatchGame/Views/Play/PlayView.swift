@@ -104,11 +104,11 @@ struct PlayView: View {
         if let active = session.activeItem {
             ZStack {
                 timerRing(for: active, size: itemSize + 18)
-                ItemView(visual: active.item.visual, hint: hint(for: active.item), size: itemSize)
+                ItemView(visual: active.item.visual, hint: hint(for: active.item), size: itemSize, hold: active.isHold)
             }
             .id(active.index)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(session.categoryLabel(active.expectedCategoryID, in: session.currentPlan)))
+            .accessibilityLabel(itemLabel(for: active))
             .accessibilityActions {
                 ForEach(session.currentPlan.mapping.edges, id: \.self) { edge in
                     Button(labels[edge] ?? edge.rawValue) { session.answer(edge) }
@@ -142,6 +142,11 @@ struct PlayView: View {
             result[edge] = session.categoryLabel(category, in: session.currentPlan)
         }
         return result
+    }
+
+    private func itemLabel(for active: ActiveItem) -> Text {
+        let category = session.categoryLabel(active.expectedCategoryID, in: session.currentPlan)
+        return active.isHold ? Text("\(category), hold") : Text(category)
     }
 
     private func hint(for item: Item) -> String? {
@@ -178,7 +183,9 @@ struct PlayView: View {
                 try? await Task.sleep(for: .milliseconds(250))
                 highlightedEdge = nil
             }
-        case .wrong, .timedOut:
+        case .held:
+            break
+        case .wrong, .timedOut, .falseAlarm:
             withAnimation(.easeOut(duration: 0.1)) { flashEdge = true }
             Task {
                 try? await Task.sleep(for: .milliseconds(180))
@@ -197,7 +204,7 @@ private struct OutcomeItemView: View {
     @State private var progress: CGFloat = 0
 
     var body: some View {
-        ItemView(visual: resolved.item.item.visual, hint: hint, size: size)
+        ItemView(visual: resolved.item.item.visual, hint: hint, size: size, hold: resolved.item.isHold)
             .modifier(OutcomeModifier(outcome: resolved.outcome, edge: resolved.item.expectedEdge,
                                       reduceMotion: reduceMotion, progress: progress))
             .onAppear {
@@ -232,10 +239,10 @@ private struct OutcomeModifier: ViewModifier, Animatable {
             let distance: CGFloat = reduceMotion ? 0 : 90 * progress
             return CGSize(width: edge == .left ? -distance : edge == .right ? distance : 0,
                           height: edge == .up ? -distance : edge == .down ? distance : 0)
-        case .wrong:
+        case .wrong, .falseAlarm:
             let shake: CGFloat = reduceMotion ? 0 : sin(progress * .pi * 4) * 8 * (1 - progress)
             return CGSize(width: shake, height: 0)
-        case .timedOut:
+        case .timedOut, .held:
             return .zero
         }
     }
@@ -244,15 +251,16 @@ private struct OutcomeModifier: ViewModifier, Animatable {
         guard !reduceMotion else { return 1 }
         switch outcome {
         case .correct: return 1 + 0.15 * progress
-        case .wrong: return 1
+        case .held: return 1 - 0.1 * progress
+        case .wrong, .falseAlarm: return 1
         case .timedOut: return 1 - 0.2 * progress
         }
     }
 
     private var opacity: Double {
         switch outcome {
-        case .correct, .timedOut: 1 - progress
-        case .wrong: 1 - progress * 0.6
+        case .correct, .timedOut, .held: 1 - progress
+        case .wrong, .falseAlarm: 1 - progress * 0.6
         }
     }
 }

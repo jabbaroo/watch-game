@@ -20,8 +20,14 @@ import SwipeSortEngine
                    reaction: .milliseconds(450), window: .seconds(2), points: correct ? 100 : 0)
     }
 
+    func held(_ index: Int) -> ItemResult {
+        ItemResult(roundIndex: 0, itemIndex: index, dimensionID: "colour", attributes: ["colour": "blue", "shape": "circle"],
+                   expectedCategoryID: "blue", answeredCategoryID: nil, correct: true, timedOut: false,
+                   reaction: nil, window: .seconds(2), points: 100, hold: true)
+    }
+
     func round(_ index: Int, score: Int = 200, cutShort: Bool = false) -> RoundResult {
-        RoundResult(index: index, dimensionID: "colour", categoryCount: 2, perfect: false, cutShort: cutShort, score: score, items: [item(0), item(1, correct: false)])
+        RoundResult(index: index, dimensionID: "colour", categoryCount: 2, perfect: false, cutShort: cutShort, score: score, items: [item(0), item(1, correct: false), held(2)])
     }
 
     func summary(score: Int, rounds: [RoundResult], reason: RunEndReason = .completedAllRounds) -> RunSummary {

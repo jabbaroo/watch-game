@@ -10,6 +10,9 @@ struct StatisticsSections: View {
         Section("Errors") {
             row("Wrong swipes", value: "\(statistics.wrongSwipeCount)")
             row("Timeouts", value: "\(statistics.timeoutCount)")
+            if statistics.holdCount > 0 {
+                row("False alarms", value: "\(statistics.falseAlarmCount) of \(statistics.holdCount)")
+            }
             ForEach(statistics.errorsByDimension, id: \.dimensionID) { entry in
                 row(verbatim: dimensionName(entry.dimensionID), value: "\(entry.errors) of \(entry.total)")
             }

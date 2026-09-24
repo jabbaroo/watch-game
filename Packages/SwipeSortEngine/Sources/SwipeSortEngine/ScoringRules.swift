@@ -25,4 +25,9 @@ public struct ScoringRules: Sendable, Equatable {
     public func points(streak: Int, reaction: Duration, window: Duration) -> Int {
         basePoints * multiplier(streak: streak) + speedBonus(reaction: reaction, window: window)
     }
+
+    /// Points for leaving a hold item alone: base times multiplier, no speed bonus.
+    public func pointsForHold(streak: Int) -> Int {
+        basePoints * multiplier(streak: streak)
+    }
 }

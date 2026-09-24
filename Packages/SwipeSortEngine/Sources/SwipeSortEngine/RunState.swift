@@ -164,7 +164,8 @@ public struct RunState: Sendable, Equatable {
             expectedEdge: edge,
             shownAt: now,
             deadline: now + window,
-            window: window
+            window: window,
+            isHold: draw.hold
         )
         nextItemIndex += 1
         phase = .playing(active)
@@ -173,21 +174,37 @@ public struct RunState: Sendable, Equatable {
 
     private mutating func resolve(_ active: ActiveItem, answeredEdge: SwipeEdge?, at now: Duration) -> [RunEffect] {
         let plan = currentPlan
-        let timedOut = answeredEdge == nil
-        let correct = answeredEdge == active.expectedEdge
-        let reaction: Duration? = timedOut ? nil : now - active.shownAt
+        let answered = answeredEdge != nil
+        let reaction: Duration? = answered ? now - active.shownAt : nil
         var points = 0
         let outcome: ItemOutcome
+        let correct: Bool
 
-        if correct, let reaction {
-            streak += 1
-            points = configuration.scoring.points(streak: streak, reaction: reaction, window: active.window)
-            score += points
-            outcome = .correct(points: points, streak: streak)
+        if active.isHold {
+            // Go, no-go: leaving the item alone is right, flicking it is a false alarm.
+            correct = !answered
+            if correct {
+                streak += 1
+                points = configuration.scoring.pointsForHold(streak: streak)
+                score += points
+                outcome = .held(points: points, streak: streak)
+            } else {
+                streak = 0
+                lives -= 1
+                outcome = .falseAlarm
+            }
         } else {
-            streak = 0
-            lives -= 1
-            outcome = timedOut ? .timedOut : .wrong
+            correct = answeredEdge == active.expectedEdge
+            if correct, let reaction {
+                streak += 1
+                points = configuration.scoring.points(streak: streak, reaction: reaction, window: active.window)
+                score += points
+                outcome = .correct(points: points, streak: streak)
+            } else {
+                streak = 0
+                lives -= 1
+                outcome = answered ? .wrong : .timedOut
+            }
         }
 
         let result = ItemResult(
@@ -198,16 +215,17 @@ public struct RunState: Sendable, Equatable {
             expectedCategoryID: active.expectedCategoryID,
             answeredCategoryID: answeredEdge.flatMap { plan.mapping.category(at: $0) },
             correct: correct,
-            timedOut: timedOut,
+            timedOut: !answered && !active.isHold,
             reaction: reaction,
             window: active.window,
-            points: points
+            points: points,
+            hold: active.isHold
         )
         currentRoundItems.append(result)
 
         var effects: [RunEffect] = [.itemResolved(result, outcome)]
         switch outcome {
-        case .correct:
+        case .correct, .held:
             effects.append(.scoreChanged(score))
             let every = configuration.streakStep
             if every > 0, streak % every == 0 {
@@ -215,7 +233,7 @@ public struct RunState: Sendable, Equatable {
             } else {
                 effects.append(.feedback(.correct(streak: streak)))
             }
-        case .wrong:
+        case .wrong, .falseAlarm:
             effects.append(.livesChanged(lives))
             effects.append(.feedback(.wrong))
         case .timedOut:

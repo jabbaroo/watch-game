@@ -1,5 +1,5 @@
 /// One resolved item. Produced by the engine, persisted by the app.
-public struct ItemResult: Codable, Sendable, Equatable {
+public struct ItemResult: Sendable, Equatable {
     public var roundIndex: Int
     public var itemIndex: Int
     public var dimensionID: String
@@ -13,10 +13,12 @@ public struct ItemResult: Codable, Sendable, Equatable {
     public var reaction: Duration?
     public var window: Duration
     public var points: Int
+    /// Go, no-go: the item was a hold item. Correct means it was left alone; incorrect means a false alarm.
+    public var hold: Bool
 
     public init(roundIndex: Int, itemIndex: Int, dimensionID: String, attributes: [String: String],
                 expectedCategoryID: String, answeredCategoryID: String?, correct: Bool, timedOut: Bool,
-                reaction: Duration?, window: Duration, points: Int) {
+                reaction: Duration?, window: Duration, points: Int, hold: Bool = false) {
         self.roundIndex = roundIndex
         self.itemIndex = itemIndex
         self.dimensionID = dimensionID
@@ -28,6 +30,46 @@ public struct ItemResult: Codable, Sendable, Equatable {
         self.reaction = reaction
         self.window = window
         self.points = points
+        self.hold = hold
+    }
+}
+
+extension ItemResult: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case roundIndex, itemIndex, dimensionID, attributes, expectedCategoryID, answeredCategoryID
+        case correct, timedOut, reaction, window, points, hold
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        roundIndex = try c.decode(Int.self, forKey: .roundIndex)
+        itemIndex = try c.decode(Int.self, forKey: .itemIndex)
+        dimensionID = try c.decode(String.self, forKey: .dimensionID)
+        attributes = try c.decode([String: String].self, forKey: .attributes)
+        expectedCategoryID = try c.decode(String.self, forKey: .expectedCategoryID)
+        answeredCategoryID = try c.decodeIfPresent(String.self, forKey: .answeredCategoryID)
+        correct = try c.decode(Bool.self, forKey: .correct)
+        timedOut = try c.decode(Bool.self, forKey: .timedOut)
+        reaction = try c.decodeIfPresent(Duration.self, forKey: .reaction)
+        window = try c.decode(Duration.self, forKey: .window)
+        points = try c.decode(Int.self, forKey: .points)
+        hold = try c.decodeIfPresent(Bool.self, forKey: .hold) ?? false
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(roundIndex, forKey: .roundIndex)
+        try c.encode(itemIndex, forKey: .itemIndex)
+        try c.encode(dimensionID, forKey: .dimensionID)
+        try c.encode(attributes, forKey: .attributes)
+        try c.encode(expectedCategoryID, forKey: .expectedCategoryID)
+        try c.encodeIfPresent(answeredCategoryID, forKey: .answeredCategoryID)
+        try c.encode(correct, forKey: .correct)
+        try c.encode(timedOut, forKey: .timedOut)
+        try c.encodeIfPresent(reaction, forKey: .reaction)
+        try c.encode(window, forKey: .window)
+        try c.encode(points, forKey: .points)
+        try c.encode(hold, forKey: .hold)
     }
 }
 

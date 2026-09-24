@@ -7,8 +7,10 @@ public struct ActiveItem: Sendable, Equatable {
     public var shownAt: Duration
     public var deadline: Duration
     public var window: Duration
+    /// Go, no-go: a hold item must be left alone until its window closes.
+    public var isHold: Bool
 
-    public init(index: Int, item: Item, expectedCategoryID: String, expectedEdge: SwipeEdge, shownAt: Duration, deadline: Duration, window: Duration) {
+    public init(index: Int, item: Item, expectedCategoryID: String, expectedEdge: SwipeEdge, shownAt: Duration, deadline: Duration, window: Duration, isHold: Bool = false) {
         self.index = index
         self.item = item
         self.expectedCategoryID = expectedCategoryID
@@ -16,6 +18,7 @@ public struct ActiveItem: Sendable, Equatable {
         self.shownAt = shownAt
         self.deadline = deadline
         self.window = window
+        self.isHold = isHold
     }
 }
 
@@ -23,6 +26,10 @@ public enum ItemOutcome: Sendable, Equatable {
     case correct(points: Int, streak: Int)
     case wrong
     case timedOut
+    /// A hold item left alone until its window closed: correct, scored without a speed bonus.
+    case held(points: Int, streak: Int)
+    /// A hold item that was flicked: wrong, costs a life.
+    case falseAlarm
 }
 
 /// The engine says when feedback happens; the app's services decide what it feels and sounds like.
