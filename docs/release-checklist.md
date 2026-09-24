@@ -2,6 +2,7 @@
 
 ## Tests
 - [ ] `Scripts/engine-test.sh` and `Scripts/test.sh` pass (unit and UI).
+- [ ] `AccessibilityAuditTests` pass on a simulator with VoiceOver and Reduce Motion on (flags in the v1 plan's execution notes).
 
 ## Simulator layout pass
 - [ ] `Scripts/screenshots.sh` runs clean on 40, 41, 42, 44, 45, 46 and 49 mm.
@@ -16,7 +17,7 @@
 - [ ] VoiceOver: every screen navigable; the item reads its category; custom actions sort it; Tap to sort is forced on.
 - [ ] Tap to sort mode: all four labels tappable, swipes still work.
 - [ ] Full 8-round run reaches Results with the breakdown; History shows the run; daily streak increments the next day.
-- [ ] Widget shows today's status; tapping it opens the daily when no run is in progress.
+- [ ] Widget shows today's status; tapping it opens the daily when no run is in progress. (Data path verified on the simulator: the App Group summary file is written on dismissal; the Smart Stack rendering needs a real watch or a manual add in Device Hub.)
 
 ## App Store Connect
 - [ ] Set `DEVELOPMENT_TEAM` in the project or sign in to Xcode; bundle ids registered with the App Group capability.

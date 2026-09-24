@@ -83,25 +83,45 @@ final class EngineSound: SoundService {
         if isEnabled { startIfNeeded() }
     }
 
+    private var isActivating = false
+
     private func startIfNeeded() {
-        guard !isBroken else { return }
+        guard !isBroken, !isActivating else { return }
         do {
             if !isConfigured {
                 try configure(bundle: bundle)
                 isConfigured = true
             }
-            try AVAudioSession.sharedInstance().setActive(true)
-            if !engine.isRunning { try engine.start() }
         } catch {
             isBroken = true
             Self.logger.error("Sound disabled: \(String(describing: error), privacy: .public)")
+            return
+        }
+        guard !engine.isRunning else { return }
+        // watchOS activates sessions asynchronously (it may ask the wearer to pick an output route).
+        isActivating = true
+        AVAudioSession.sharedInstance().activate(options: []) { [weak self] success, error in
+            Task { @MainActor in
+                guard let self else { return }
+                self.isActivating = false
+                guard success, self.isEnabled else {
+                    if let error { Self.logger.error("Audio session activation failed: \(String(describing: error), privacy: .public)") }
+                    return
+                }
+                do { try self.engine.start() } catch {
+                    Self.logger.error("Engine start failed: \(String(describing: error), privacy: .public)")
+                }
+            }
         }
     }
 
     private func stop() {
         player.stop()
         engine.stop()
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        let session = AVAudioSession.sharedInstance()
+        Task.detached(priority: .utility) {
+            try? session.setActive(false, options: .notifyOthersOnDeactivation)
+        }
     }
 
     private func configure(bundle: Bundle) throws {
@@ -134,7 +154,7 @@ final class EngineSound: SoundService {
     func play(_ cue: FeedbackCue) {
         guard isEnabled, let asset = cue.sound, let buffer = buffers[asset] else { return }
         if !engine.isRunning {
-            startIfNeeded()
+            startIfNeeded()          // asynchronous; this cue is dropped, the next one plays
             guard engine.isRunning else { return }
         }
         // Rapid cues replace whatever is playing; the fanfare and the run-end sting queue behind it,

@@ -7,7 +7,7 @@ OUT=docs/screenshots
 mkdir -p "$OUT"
 DEVICES=("Apple Watch SE 3 (40mm)" "Apple Watch Series 9 (41mm)" "Apple Watch Series 11 (42mm)" "Apple Watch SE 3 (44mm)" "Apple Watch Series 9 (45mm)" "Apple Watch Series 11 (46mm)" "Apple Watch Ultra 3 (49mm)")
 xcodebuild -project WatchGame.xcodeproj -scheme WatchGame -destination 'generic/platform=watchOS Simulator' \
-  -derivedDataPath .build/DerivedData -quiet CODE_SIGNING_ALLOWED=NO build
+  -derivedDataPath .build/DerivedData -quiet CODE_SIGNING_ALLOWED=YES CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- build
 APP=.build/DerivedData/Build/Products/Debug-watchsimulator/WatchGame.app
 for device in "${DEVICES[@]}"; do
   udid=$(xcrun simctl list devices available | grep "$device (" | head -1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/' || true)

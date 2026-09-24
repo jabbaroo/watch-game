@@ -162,7 +162,7 @@ Sound is on by default but never required to play. The audio session uses the am
 | runEnded | sting |
 | lifeEarned | none |
 
-Because the streak resets on any error, the pitch resets with it. Rapid cues replace whatever is still playing; the perfect-round fanfare and the run-end sting queue behind the current sound so neither is cut off. The audio session and engine run only while the Sounds setting is on.
+Because the streak resets on any error, the pitch resets with it. Rapid cues replace whatever is still playing; the perfect-round fanfare and the run-end sting queue behind the current sound so neither is cut off. The audio session and engine run only while the Sounds setting is on; the session is activated with the asynchronous watchOS call, so a cue that arrives before activation completes is dropped rather than delayed.
 
 ### 5.3 Visual effects
 

@@ -3777,7 +3777,7 @@ cd "$(dirname "$0")/.."
 xcodebuild -project WatchGame.xcodeproj -scheme WatchGame \
   -destination 'generic/platform=watchOS Simulator' \
   -derivedDataPath .build/DerivedData \
-  -quiet CODE_SIGNING_ALLOWED=NO build "$@"
+  -quiet CODE_SIGNING_ALLOWED=YES CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- build "$@"
 echo "BUILD OK"
 ```
 
@@ -3797,7 +3797,7 @@ fi
 xcodebuild -project WatchGame.xcodeproj -scheme WatchGame \
   -destination "platform=watchOS Simulator,name=${DEVICE}" \
   -derivedDataPath .build/DerivedData \
-  -quiet CODE_SIGNING_ALLOWED=NO test "$@"
+  -quiet CODE_SIGNING_ALLOWED=YES CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- test "$@"
 echo "TESTS OK"
 ```
 
@@ -4950,25 +4950,45 @@ final class EngineSound: SoundService {
         if isEnabled { startIfNeeded() }
     }
 
+    private var isActivating = false
+
     private func startIfNeeded() {
-        guard !isBroken else { return }
+        guard !isBroken, !isActivating else { return }
         do {
             if !isConfigured {
                 try configure(bundle: bundle)
                 isConfigured = true
             }
-            try AVAudioSession.sharedInstance().setActive(true)
-            if !engine.isRunning { try engine.start() }
         } catch {
             isBroken = true
             Self.logger.error("Sound disabled: \(String(describing: error), privacy: .public)")
+            return
+        }
+        guard !engine.isRunning else { return }
+        // watchOS activates sessions asynchronously (it may ask the wearer to pick an output route).
+        isActivating = true
+        AVAudioSession.sharedInstance().activate(options: []) { [weak self] success, error in
+            Task { @MainActor in
+                guard let self else { return }
+                self.isActivating = false
+                guard success, self.isEnabled else {
+                    if let error { Self.logger.error("Audio session activation failed: \(String(describing: error), privacy: .public)") }
+                    return
+                }
+                do { try self.engine.start() } catch {
+                    Self.logger.error("Engine start failed: \(String(describing: error), privacy: .public)")
+                }
+            }
         }
     }
 
     private func stop() {
         player.stop()
         engine.stop()
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        let session = AVAudioSession.sharedInstance()
+        Task.detached(priority: .utility) {
+            try? session.setActive(false, options: .notifyOthersOnDeactivation)
+        }
     }
 
     private func configure(bundle: Bundle) throws {
@@ -5001,7 +5021,7 @@ final class EngineSound: SoundService {
     func play(_ cue: FeedbackCue) {
         guard isEnabled, let asset = cue.sound, let buffer = buffers[asset] else { return }
         if !engine.isRunning {
-            startIfNeeded()
+            startIfNeeded()          // asynchronous; this cue is dropped, the next one plays
             guard engine.isRunning else { return }
         }
         // Rapid cues replace whatever is playing; the fanfare and the run-end sting queue behind it,
@@ -7683,7 +7703,7 @@ OUT=docs/screenshots
 mkdir -p "$OUT"
 DEVICES=("Apple Watch SE 3 (40mm)" "Apple Watch Series 9 (41mm)" "Apple Watch Series 11 (42mm)" "Apple Watch SE 3 (44mm)" "Apple Watch Series 9 (45mm)" "Apple Watch Series 11 (46mm)" "Apple Watch Ultra 3 (49mm)")
 xcodebuild -project WatchGame.xcodeproj -scheme WatchGame -destination 'generic/platform=watchOS Simulator' \
-  -derivedDataPath .build/DerivedData -quiet CODE_SIGNING_ALLOWED=NO build
+  -derivedDataPath .build/DerivedData -quiet CODE_SIGNING_ALLOWED=YES CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- build
 APP=.build/DerivedData/Build/Products/Debug-watchsimulator/WatchGame.app
 for device in "${DEVICES[@]}"; do
   udid=$(xcrun simctl list devices available | grep "$device (" | head -1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/' || true)
@@ -7777,7 +7797,7 @@ Result on 2026-09-24: on 40 mm the item ring touched the left and right pills, s
 
 On the 40mm and 49mm simulators: launch the app, start a run, and confirm with a screenshot (`xcrun simctl io booted screenshot play.png`) that all four edge labels are legible, do not overlap the item or its ring, and with Tap to sort on each label is at least 44 points tall. If labels overlap on the small sizes, use the `GeometryReader` width already in `PlayView`: for widths under 180 points reduce the `itemSize` multiplier from 0.36 to 0.32 and the edge label font in `EdgeLabelsView` from 13 to 12 (`horizontalSizeClass` is not available on watchOS).
 
-- [ ] **Step 3: Accessibility checks**
+- [x] **Step 3: Accessibility checks**
 
 Using Accessibility Inspector (Xcode, Open Developer Tool, Accessibility Inspector) targeted at the booted simulator, plus code review, verify:
 - Every button on Home, Settings, Paused and Results has a label that reads as an action.
@@ -8499,7 +8519,7 @@ git commit -m "test(ui): launch-and-play smoke test; docs: release checklist"
 
 ## Execution notes
 
-Status on 2026-09-24: Tasks 1 to 19 and 21 to 23 are implemented, committed and tested: 75 engine tests pass with `Scripts/engine-test.sh`, and `Scripts/test.sh` passes 37 unit tests plus the UI smoke test on the watchOS 27 simulator. Task 20 is done except its VoiceOver and Reduce Motion checks, which need the simulator's accessibility settings or hardware and remain on the release checklist. `Tools/plan_apply.py` writes a task's file blocks from this plan and `Tools/plan_sync.py` copies a file's current content back into its block.
+Status on 2026-09-24: Tasks 1 to 19 and 21 to 23 are implemented, committed and tested: 75 engine tests pass with `Scripts/engine-test.sh`, and `Scripts/test.sh` passes 37 unit tests plus the UI smoke test on the watchOS 27 simulator. Task 20 is done: `WatchGameUITests/AccessibilityAuditTests` walks every screen, and it was run on a simulator with VoiceOver and Reduce Motion switched on at the system level (`defaults write com.apple.Accessibility VoiceOverTouchEnabled/ReduceMotionEnabled -bool true`, reboot the device, then `TEST_RUNNER_A11Y_VOICEOVER=1 TEST_RUNNER_A11Y_REDUCE_MOTION=1` in the environment). Simulator builds are signed ad hoc so the App Group entitlement is present and the widget summary file is written. `Tools/plan_apply.py` writes a task's file blocks from this plan and `Tools/plan_sync.py` copies a file's current content back into its block.
 
 
 - Tasks 1 to 9 need only macOS and `swift test`; they can be done before the watchOS simulator runtime is available.

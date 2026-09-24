@@ -5,5 +5,5 @@ cd "$(dirname "$0")/.."
 xcodebuild -project WatchGame.xcodeproj -scheme WatchGame \
   -destination 'generic/platform=watchOS Simulator' \
   -derivedDataPath .build/DerivedData \
-  -quiet CODE_SIGNING_ALLOWED=NO build "$@"
+  -quiet CODE_SIGNING_ALLOWED=YES CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- build "$@"
 echo "BUILD OK"

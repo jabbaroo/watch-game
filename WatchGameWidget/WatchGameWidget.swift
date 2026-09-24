@@ -2,45 +2,6 @@ import RelevanceKit
 import SwiftUI
 import WidgetKit
 
-nonisolated struct DailyEntry: TimelineEntry {
-    let date: Date
-    let state: WidgetSummary.DisplayState
-}
-
-// nonisolated: WidgetKit calls the provider from its own context; the app target defaults to main-actor isolation.
-nonisolated struct DailyProvider: TimelineProvider {
-    func placeholder(in context: Context) -> DailyEntry {
-        DailyEntry(date: .now, state: .init(playedToday: false, streak: 3))
-    }
-
-    func getSnapshot(in context: Context, completion: @escaping (DailyEntry) -> Void) {
-        completion(entry(for: .now))
-    }
-
-    func getTimeline(in context: Context, completion: @escaping (Timeline<DailyEntry>) -> Void) {
-        let now = Date.now
-        var entries = [entry(for: now)]
-        if let midnight = Calendar.current.nextDate(after: now, matching: DateComponents(hour: 0, minute: 0), matchingPolicy: .nextTime) {
-            entries.append(entry(for: midnight))
-        }
-        completion(Timeline(entries: entries, policy: .atEnd))
-    }
-
-    /// Hints the Smart Stack to surface the widget around the player's usual play hour.
-    func relevance() async -> WidgetRelevance<Void> {
-        guard let hour = WidgetSummary.load()?.usualPlayHour,
-              let start = Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: .now)
-        else { return WidgetRelevance([]) }
-        let window = DateInterval(start: start.addingTimeInterval(-30 * 60), duration: 60 * 60)
-        return WidgetRelevance([WidgetRelevanceAttribute(context: .date(interval: window, kind: .scheduled))])
-    }
-
-    private func entry(for date: Date) -> DailyEntry {
-        let summary = WidgetSummary.load() ?? WidgetSummary(dailyKey: "", dailyPlayedToday: false, dailyStreak: 0, usualPlayHour: nil)
-        return DailyEntry(date: date, state: summary.displayState(on: date))
-    }
-}
-
 struct DailyWidgetView: View {
     @Environment(\.widgetFamily) private var family
     let entry: DailyEntry

@@ -11,5 +11,5 @@ fi
 xcodebuild -project WatchGame.xcodeproj -scheme WatchGame \
   -destination "platform=watchOS Simulator,name=${DEVICE}" \
   -derivedDataPath .build/DerivedData \
-  -quiet CODE_SIGNING_ALLOWED=NO test "$@"
+  -quiet CODE_SIGNING_ALLOWED=YES CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- test "$@"
 echo "TESTS OK"
