@@ -43,6 +43,8 @@ public struct RunStatistics: Sendable, Equatable {
     /// Mean over qualifying rounds of (mean of first `leadingItemCount` correct reactions
     /// minus mean of the remaining correct reactions). Nil when no round qualifies.
     public var switchCost: Duration?
+    /// N-back: accuracy per depth over rounds played at that depth, depths above zero only.
+    public var accuracyByDepth: [Int: Double]
     /// Stroop interference: mean correct reaction time on incongruent items minus congruent ones.
     /// An item is congruent when every dimension carries the same value id (a word in its own
     /// colour). Nil unless there are at least `minimumConflictItems` correct items of each kind.
@@ -101,6 +103,14 @@ public struct RunStatistics: Sendable, Equatable {
             return leading - rest
         }
 
+        var accuracyByDepth: [Int: Double] = [:]
+        for (depth, group) in Dictionary(grouping: rounds.filter { $0.backDepth > 0 }, by: \.backDepth) {
+            let depthItems = group.flatMap(\.items)
+            if !depthItems.isEmpty {
+                accuracyByDepth[depth] = Double(depthItems.filter(\.correct).count) / Double(depthItems.count)
+            }
+        }
+
         let congruent = correct.filter(\.isCongruent).compactMap(\.reaction)
         let incongruent = correct.filter { !$0.isCongruent }.compactMap(\.reaction)
         var conflictCost: Duration?
@@ -120,6 +130,7 @@ public struct RunStatistics: Sendable, Equatable {
             confusionPairs: confusionPairs,
             meanReaction: mean(correct.compactMap(\.reaction)),
             switchCost: mean(switchCosts),
+            accuracyByDepth: accuracyByDepth,
             conflictCost: conflictCost
         )
     }

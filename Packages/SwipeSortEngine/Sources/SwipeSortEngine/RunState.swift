@@ -16,6 +16,8 @@ public struct RunState: Sendable, Equatable {
 
     private var sequencer: ItemSequencer?
     private var nextItemIndex = 0
+    /// Categories of the items shown so far this round, for n-back rounds.
+    private var shownCategories: [String] = []
     private var roundResumedAt: Duration = .zero
     private var roundElapsedBeforeResume: Duration = .zero
 
@@ -59,9 +61,9 @@ public struct RunState: Sendable, Equatable {
                 return endRound(cutShort: false)
             }
             if now >= active.deadline {
-                return resolve(active, answeredEdge: nil, at: now)
+                return active.isPrimer ? finishPrimer(active, at: now) : resolve(active, answeredEdge: nil, at: now)
             }
-            guard currentPlan.mapping.category(at: edge) != nil else {
+            guard !active.isPrimer, currentPlan.mapping.category(at: edge) != nil else {
                 return [.wake(at: min(active.deadline, roundDeadline(at: now)))]
             }
             return resolve(active, answeredEdge: edge, at: now)
@@ -71,7 +73,7 @@ public struct RunState: Sendable, Equatable {
                 return endRound(cutShort: false)
             }
             if now >= active.deadline {
-                return resolve(active, answeredEdge: nil, at: now)
+                return active.isPrimer ? finishPrimer(active, at: now) : resolve(active, answeredEdge: nil, at: now)
             }
             return [.wake(at: min(active.deadline, roundDeadline(at: now)))]
 
@@ -140,6 +142,7 @@ public struct RunState: Sendable, Equatable {
     private mutating func beginRound(_ plan: RoundPlan, at now: Duration) -> [RunEffect] {
         sequencer = ItemSequencer(pack: pack, plan: plan, maximumConsecutiveSameTarget: configuration.maximumConsecutiveSameTarget)
         nextItemIndex = 0
+        shownCategories = []
         streak = 0
         currentRoundItems = []
         roundResumedAt = now
@@ -153,23 +156,41 @@ public struct RunState: Sendable, Equatable {
         guard var sequencer else { preconditionFailure("No sequencer for the current round") }
         let draw = sequencer.next()
         self.sequencer = sequencer
-        guard let edge = currentPlan.mapping.edge(for: draw.categoryID) else {
+        // N-back: the first `depth` items are primers; after that the answer is the item shown `depth` steps earlier.
+        let depth = currentPlan.backDepth
+        let isPrimer = nextItemIndex < depth
+        let expectedCategoryID = depth > 0 && !isPrimer ? shownCategories[nextItemIndex - depth] : draw.categoryID
+        shownCategories.append(draw.categoryID)
+        guard let edge = currentPlan.mapping.edge(for: expectedCategoryID) else {
             preconditionFailure("The planner maps every active category to an edge")
         }
-        let window = configuration.itemWindow(roundIndex: roundIndex, streak: streak, isFirstItem: nextItemIndex == 0)
+        let window = configuration.itemWindow(roundIndex: roundIndex, streak: streak, isFirstItem: nextItemIndex == depth)
         let active = ActiveItem(
             index: nextItemIndex,
             item: draw.item,
-            expectedCategoryID: draw.categoryID,
+            expectedCategoryID: expectedCategoryID,
             expectedEdge: edge,
             shownAt: now,
             deadline: now + window,
             window: window,
-            isHold: draw.hold
+            isHold: draw.hold && !isPrimer,
+            isPrimer: isPrimer
         )
         nextItemIndex += 1
         phase = .playing(active)
         return [.itemShown(active), .wake(at: min(active.deadline, roundDeadline(at: now)))]
+    }
+
+    /// A primer finished showing: no record, no score, no life. The UI gets a neutral outcome.
+    private mutating func finishPrimer(_ active: ActiveItem, at now: Duration) -> [RunEffect] {
+        let result = ItemResult(
+            roundIndex: roundIndex, itemIndex: active.index, dimensionID: currentPlan.dimensionID,
+            attributes: active.item.attributes, expectedCategoryID: active.expectedCategoryID,
+            answeredCategoryID: nil, correct: true, timedOut: false, reaction: nil, window: active.window, points: 0
+        )
+        let nextItemAt = now + configuration.interItemDelay
+        phase = .betweenItems(nextItemAt: nextItemAt)
+        return [.itemResolved(result, .primed), .wake(at: min(nextItemAt, roundDeadline(at: now)))]
     }
 
     private mutating func resolve(_ active: ActiveItem, answeredEdge: SwipeEdge?, at now: Duration) -> [RunEffect] {
@@ -239,6 +260,8 @@ public struct RunState: Sendable, Equatable {
         case .timedOut:
             effects.append(.livesChanged(lives))
             effects.append(.feedback(.timedOut))
+        case .primed:
+            break // primers resolve in finishPrimer, never here
         }
 
         if lives <= 0 {
@@ -277,7 +300,8 @@ public struct RunState: Sendable, Equatable {
             perfect: perfect,
             cutShort: cutShort,
             score: roundScore,
-            items: currentRoundItems
+            items: currentRoundItems,
+            backDepth: plan.backDepth
         )
         completedRounds.append(result)
         currentRoundItems = []

@@ -1,0 +1,259 @@
+{
+  "id": "nback",
+  "nameKey": "pack.nback",
+  "descriptionKey": "pack.nback.description",
+  "backRamp": [
+    1,
+    1,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2
+  ],
+  "dimensions": [
+    {
+      "id": "colour",
+      "nameKey": "dimension.colour",
+      "values": [
+        {
+          "id": "red",
+          "labelKey": "colour.red",
+          "hintKey": "hint.colour.red"
+        },
+        {
+          "id": "yellow",
+          "labelKey": "colour.yellow",
+          "hintKey": "hint.colour.yellow"
+        },
+        {
+          "id": "green",
+          "labelKey": "colour.green",
+          "hintKey": "hint.colour.green"
+        },
+        {
+          "id": "blue",
+          "labelKey": "colour.blue",
+          "hintKey": "hint.colour.blue"
+        }
+      ]
+    },
+    {
+      "id": "shape",
+      "nameKey": "dimension.shape",
+      "values": [
+        {
+          "id": "circle",
+          "labelKey": "shape.circle"
+        },
+        {
+          "id": "square",
+          "labelKey": "shape.square"
+        },
+        {
+          "id": "triangle",
+          "labelKey": "shape.triangle"
+        },
+        {
+          "id": "star",
+          "labelKey": "shape.star"
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": "red-circle",
+      "attributes": {
+        "colour": "red",
+        "shape": "circle"
+      },
+      "visual": {
+        "type": "shape",
+        "kind": "circle",
+        "colour": "#D55E00"
+      }
+    },
+    {
+      "id": "red-square",
+      "attributes": {
+        "colour": "red",
+        "shape": "square"
+      },
+      "visual": {
+        "type": "shape",
+        "kind": "square",
+        "colour": "#D55E00"
+      }
+    },
+    {
+      "id": "red-triangle",
+      "attributes": {
+        "colour": "red",
+        "shape": "triangle"
+      },
+      "visual": {
+        "type": "shape",
+        "kind": "triangle",
+        "colour": "#D55E00"
+      }
+    },
+    {
+      "id": "red-star",
+      "attributes": {
+        "colour": "red",
+        "shape": "star"
+      },
+      "visual": {
+        "type": "shape",
+        "kind": "star",
+        "colour": "#D55E00"
+      }
+    },
+    {
+      "id": "yellow-circle",
+      "attributes": {
+        "colour": "yellow",
+        "shape": "circle"
+      },
+      "visual": {
+        "type": "shape",
+        "kind": "circle",
+        "colour": "#F0E442"
+      }
+    },
+    {
+      "id": "yellow-square",
+      "attributes": {
+        "colour": "yellow",
+        "shape": "square"
+      },
+      "visual": {
+        "type": "shape",
+        "kind": "square",
+        "colour": "#F0E442"
+      }
+    },
+    {
+      "id": "yellow-triangle",
+      "attributes": {
+        "colour": "yellow",
+        "shape": "triangle"
+      },
+      "visual": {
+        "type": "shape",
+        "kind": "triangle",
+        "colour": "#F0E442"
+      }
+    },
+    {
+      "id": "yellow-star",
+      "attributes": {
+        "colour": "yellow",
+        "shape": "star"
+      },
+      "visual": {
+        "type": "shape",
+        "kind": "star",
+        "colour": "#F0E442"
+      }
+    },
+    {
+      "id": "green-circle",
+      "attributes": {
+        "colour": "green",
+        "shape": "circle"
+      },
+      "visual": {
+        "type": "shape",
+        "kind": "circle",
+        "colour": "#009E73"
+      }
+    },
+    {
+      "id": "green-square",
+      "attributes": {
+        "colour": "green",
+        "shape": "square"
+      },
+      "visual": {
+        "type": "shape",
+        "kind": "square",
+        "colour": "#009E73"
+      }
+    },
+    {
+      "id": "green-triangle",
+      "attributes": {
+        "colour": "green",
+        "shape": "triangle"
+      },
+      "visual": {
+        "type": "shape",
+        "kind": "triangle",
+        "colour": "#009E73"
+      }
+    },
+    {
+      "id": "green-star",
+      "attributes": {
+        "colour": "green",
+        "shape": "star"
+      },
+      "visual": {
+        "type": "shape",
+        "kind": "star",
+        "colour": "#009E73"
+      }
+    },
+    {
+      "id": "blue-circle",
+      "attributes": {
+        "colour": "blue",
+        "shape": "circle"
+      },
+      "visual": {
+        "type": "shape",
+        "kind": "circle",
+        "colour": "#0072B2"
+      }
+    },
+    {
+      "id": "blue-square",
+      "attributes": {
+        "colour": "blue",
+        "shape": "square"
+      },
+      "visual": {
+        "type": "shape",
+        "kind": "square",
+        "colour": "#0072B2"
+      }
+    },
+    {
+      "id": "blue-triangle",
+      "attributes": {
+        "colour": "blue",
+        "shape": "triangle"
+      },
+      "visual": {
+        "type": "shape",
+        "kind": "triangle",
+        "colour": "#0072B2"
+      }
+    },
+    {
+      "id": "blue-star",
+      "attributes": {
+        "colour": "blue",
+        "shape": "star"
+      },
+      "visual": {
+        "type": "shape",
+        "kind": "star",
+        "colour": "#0072B2"
+      }
+    }
+  ]
+}

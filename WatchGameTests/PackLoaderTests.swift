@@ -53,6 +53,14 @@ private final class TestBundleMarker {}
         #expect(ContentPack.shapesAndColours.holdProbability == 0)
     }
 
+    @Test func twoBackPackRampsFromOneBackToTwoBack() throws {
+        let pack = try #require(PackLoader.loadPacks(from: .main).first { $0.id == "nback" })
+        #expect(pack.backRamp == [1, 1, 2, 2, 2, 2, 2, 2])
+        #expect(pack.holdProbability == 0)
+        #expect(pack.items.count == 16)
+        #expect(ContentPack.shapesAndColours.backRamp.isEmpty)
+    }
+
     @Test func stroopPackSharesValueIDsAcrossDimensions() throws {
         let stroop = try #require(PackLoader.loadPacks(from: .main).first { $0.id == "stroop" })
         #expect(stroop.items.count == 16)

@@ -6,13 +6,16 @@ public struct RoundPlan: Codable, Sendable, Equatable {
     /// Seed for this round's item stream. Drawn during planning so the items a
     /// round shows never depend on how many items earlier rounds consumed.
     public var itemSeed: UInt64
+    /// N-back depth for the round: 0 sorts the item on screen, n sorts the item shown n steps earlier.
+    public var backDepth: Int
 
-    public init(index: Int, dimensionID: String, activeCategoryIDs: [String], mapping: EdgeMapping, itemSeed: UInt64) {
+    public init(index: Int, dimensionID: String, activeCategoryIDs: [String], mapping: EdgeMapping, itemSeed: UInt64, backDepth: Int = 0) {
         self.index = index
         self.dimensionID = dimensionID
         self.activeCategoryIDs = activeCategoryIDs
         self.mapping = mapping
         self.itemSeed = itemSeed
+        self.backDepth = backDepth
     }
 }
 
@@ -34,7 +37,8 @@ public enum RoundPlanner {
                 dimensionID: dimension.id,
                 activeCategoryIDs: active,
                 mapping: EdgeMapping(categoryByEdge: categoryByEdge),
-                itemSeed: rng.next()
+                itemSeed: rng.next(),
+                backDepth: pack.backDepth(roundIndex: index)
             )
         }
     }

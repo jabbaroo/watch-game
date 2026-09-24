@@ -34,6 +34,17 @@ import Testing
         #expect(try JSONDecoder().decode(RunSummary.self, from: data) == summary)
     }
 
+    @Test func roundResultDecodesWithoutTheBackDepthKey() throws {
+        let legacy = """
+        {"index":0,"dimensionID":"colour","categoryCount":2,"perfect":false,"cutShort":false,"score":0,"items":[]}
+        """
+        let round = try JSONDecoder().decode(RoundResult.self, from: Data(legacy.utf8))
+        #expect(round.backDepth == 0)
+        var deep = round
+        deep.backDepth = 2
+        #expect(try JSONDecoder().decode(RoundResult.self, from: JSONEncoder().encode(deep)).backDepth == 2)
+    }
+
     @Test func itemResultDecodesWithoutTheHoldKey() throws {
         let legacy = """
         {"roundIndex":0,"itemIndex":1,"dimensionID":"colour","attributes":{"colour":"red"},"expectedCategoryID":"red",

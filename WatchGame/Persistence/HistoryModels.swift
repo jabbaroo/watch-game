@@ -50,6 +50,7 @@ final class RoundEntry {
     var perfect: Bool = false
     var cutShort: Bool = false
     var score: Int = 0
+    var backDepth: Int = 0
     var run: RunEntry?
     @Relationship(deleteRule: .cascade, inverse: \ItemEntry.round)
     var items: [ItemEntry]? = []
@@ -61,6 +62,7 @@ final class RoundEntry {
         perfect = result.perfect
         cutShort = result.cutShort
         score = result.score
+        backDepth = result.backDepth
         items = result.items.map(ItemEntry.init(result:))
     }
 
@@ -72,7 +74,8 @@ final class RoundEntry {
             perfect: perfect,
             cutShort: cutShort,
             score: score,
-            items: (items ?? []).sorted { $0.itemIndex < $1.itemIndex }.map(\.result)
+            items: (items ?? []).sorted { $0.itemIndex < $1.itemIndex }.map(\.result),
+            backDepth: backDepth
         )
     }
 }

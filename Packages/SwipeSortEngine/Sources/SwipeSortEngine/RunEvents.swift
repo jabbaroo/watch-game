@@ -9,8 +9,11 @@ public struct ActiveItem: Sendable, Equatable {
     public var window: Duration
     /// Go, no-go: a hold item must be left alone until its window closes.
     public var isHold: Bool
+    /// N-back: one of the first items of a round, shown to be remembered. Input is ignored and
+    /// its window closing is neutral: no points, no life, no record.
+    public var isPrimer: Bool
 
-    public init(index: Int, item: Item, expectedCategoryID: String, expectedEdge: SwipeEdge, shownAt: Duration, deadline: Duration, window: Duration, isHold: Bool = false) {
+    public init(index: Int, item: Item, expectedCategoryID: String, expectedEdge: SwipeEdge, shownAt: Duration, deadline: Duration, window: Duration, isHold: Bool = false, isPrimer: Bool = false) {
         self.index = index
         self.item = item
         self.expectedCategoryID = expectedCategoryID
@@ -19,6 +22,7 @@ public struct ActiveItem: Sendable, Equatable {
         self.deadline = deadline
         self.window = window
         self.isHold = isHold
+        self.isPrimer = isPrimer
     }
 }
 
@@ -30,6 +34,8 @@ public enum ItemOutcome: Sendable, Equatable {
     case held(points: Int, streak: Int)
     /// A hold item that was flicked: wrong, costs a life.
     case falseAlarm
+    /// An n-back primer that finished showing. Neutral.
+    case primed
 }
 
 /// The engine says when feedback happens; the app's services decide what it feels and sounds like.

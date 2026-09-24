@@ -27,6 +27,15 @@ struct RoundIntroView: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
+                if plan.backDepth == 1 {
+                    Text("Sort the previous item")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                } else if plan.backDepth > 1 {
+                    Text("Sort the item from \(plan.backDepth) back")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
                 mappingPreview(plan)
                     .frame(height: 70)
                 HStack(spacing: 12) {

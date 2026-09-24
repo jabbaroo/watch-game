@@ -349,9 +349,13 @@ Principle: every mode is a variant of the one flick loop the hand already knows.
 - Metrics: false alarms out of hold items, shown on Results as "False alarms n of m"; mean reaction time is unaffected because held items have no reaction time.
 - The engine records `hold` on each item result; older persisted results decode with hold false.
 
-### 13.3 Two-back (third)
+### 13.3 Two-back (built)
 
-Sort the item that appeared two items ago rather than the one on screen; one-back is the on-ramp in rounds 1 and 2. Metric: accuracy at each depth, reported as span. Needs the engine to keep a short history of shown items and judge answers against it.
+- Any pack may carry `backRamp`, a per-round depth list (0 to 3, rounds past the end reuse the last value, empty for plain sorting). The two-back pack ships as JSON: the shapes and colours items with the ramp 1, 1, 2, 2, 2, 2, 2, 2, so rounds 1 and 2 are one-back and the rest two-back.
+- At depth n the first n items of a round are primers: they show with an accent-coloured ring and the caption "Remember", input on them is ignored, and their window closing is neutral (no points, no life, not recorded). The first answerable item, index n, carries the first-item grace instead of the primer.
+- Every later item is judged against the category, on the active dimension, of the item shown n steps earlier. The record describes the item on screen, with the expected category taken from the earlier item. Scoring, streak and lives work as in plain sorting.
+- The round intro adds "Sort the previous item" for depth 1 or "Sort the item from n back" for deeper rounds. VoiceOver reads the item on screen ("Remember, Red" for primers).
+- Metric: accuracy per depth, shown on Results in a "Memory" section as "1-back accuracy" and "2-back accuracy". The round result records `backDepth`; older persisted rounds read back as depth 0.
 
 ### 13.4 Rule variants that need no new rendering
 

@@ -8,16 +8,25 @@ public struct ContentPack: Sendable, Equatable, Identifiable {
     public var descriptionKey: String?
     /// Go, no-go: the share of items shown as "hold" items that must be left alone. Zero for plain sorting.
     public var holdProbability: Double
+    /// N-back: how many items back each round sorts, zero-based by round; rounds past the end reuse
+    /// the last value. Empty for plain sorting. Depth 1 sorts the previous item, depth 2 the one before that.
+    public var backRamp: [Int]
     public var dimensions: [Dimension]
     public var items: [Item]
 
-    public init(id: String, nameKey: String, descriptionKey: String? = nil, holdProbability: Double = 0, dimensions: [Dimension], items: [Item]) {
+    public init(id: String, nameKey: String, descriptionKey: String? = nil, holdProbability: Double = 0, backRamp: [Int] = [], dimensions: [Dimension], items: [Item]) {
         self.id = id
         self.nameKey = nameKey
         self.descriptionKey = descriptionKey
         self.holdProbability = holdProbability
+        self.backRamp = backRamp
         self.dimensions = dimensions
         self.items = items
+    }
+
+    public func backDepth(roundIndex: Int) -> Int {
+        if backRamp.indices.contains(roundIndex) { return backRamp[roundIndex] }
+        return backRamp.last ?? 0
     }
 
     public func dimension(id: String) -> Dimension? {
@@ -28,6 +37,7 @@ public struct ContentPack: Sendable, Equatable, Identifiable {
         case noDimensions
         case noItems
         case invalidHoldProbability(Double)
+        case invalidBackDepth(Int)
         case duplicateID(String)
         case dimensionNeedsTwoValues(String)
         case itemMissingAttribute(item: String, dimension: String)
@@ -41,6 +51,9 @@ public struct ContentPack: Sendable, Equatable, Identifiable {
         guard !dimensions.isEmpty else { throw ValidationError.noDimensions }
         guard !items.isEmpty else { throw ValidationError.noItems }
         guard (0...0.9).contains(holdProbability) else { throw ValidationError.invalidHoldProbability(holdProbability) }
+        for depth in backRamp where !(0...3).contains(depth) {
+            throw ValidationError.invalidBackDepth(depth)
+        }
 
         var dimensionIDs = Set<String>()
         for dimension in dimensions {
@@ -84,7 +97,7 @@ public struct ContentPack: Sendable, Equatable, Identifiable {
 
 extension ContentPack: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, nameKey, descriptionKey, holdProbability, dimensions, items
+        case id, nameKey, descriptionKey, holdProbability, backRamp, dimensions, items
     }
 
     public init(from decoder: any Decoder) throws {
@@ -93,6 +106,7 @@ extension ContentPack: Codable {
         nameKey = try container.decode(String.self, forKey: .nameKey)
         descriptionKey = try container.decodeIfPresent(String.self, forKey: .descriptionKey)
         holdProbability = try container.decodeIfPresent(Double.self, forKey: .holdProbability) ?? 0
+        backRamp = try container.decodeIfPresent([Int].self, forKey: .backRamp) ?? []
         dimensions = try container.decode([Dimension].self, forKey: .dimensions)
         items = try container.decode([Item].self, forKey: .items)
     }
@@ -104,6 +118,9 @@ extension ContentPack: Codable {
         try container.encodeIfPresent(descriptionKey, forKey: .descriptionKey)
         if holdProbability > 0 {
             try container.encode(holdProbability, forKey: .holdProbability)
+        }
+        if !backRamp.isEmpty {
+            try container.encode(backRamp, forKey: .backRamp)
         }
         try container.encode(dimensions, forKey: .dimensions)
         try container.encode(items, forKey: .items)

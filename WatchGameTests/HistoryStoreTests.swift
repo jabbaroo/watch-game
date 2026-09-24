@@ -49,6 +49,15 @@ import SwipeSortEngine
         #expect(UInt64(bitPattern: run.seed) == 7)
     }
 
+    @Test func roundDepthRoundTrips() throws {
+        let store = try makeStore()
+        let run = store.beginRun(packID: "nback", isDaily: false, dailyKey: nil, seed: 3)
+        var deep = round(0)
+        deep.backDepth = 2
+        store.append(deep, to: run)
+        #expect(run.roundResults.first?.backDepth == 2)
+    }
+
     @Test func abandonedRunsAreMarkedIncomplete() throws {
         let store = try makeStore()
         let run = store.beginRun(packID: "shapes-colours", isDaily: false, dailyKey: nil, seed: 1)

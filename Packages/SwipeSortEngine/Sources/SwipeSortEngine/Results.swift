@@ -74,7 +74,7 @@ extension ItemResult: Codable {
 }
 
 /// One finished round, including one cut short by running out of lives.
-public struct RoundResult: Codable, Sendable, Equatable {
+public struct RoundResult: Sendable, Equatable {
     public var index: Int
     public var dimensionID: String
     public var categoryCount: Int
@@ -83,8 +83,10 @@ public struct RoundResult: Codable, Sendable, Equatable {
     /// Item points plus any perfect-round bonus.
     public var score: Int
     public var items: [ItemResult]
+    /// N-back depth the round was played at; 0 for plain sorting.
+    public var backDepth: Int
 
-    public init(index: Int, dimensionID: String, categoryCount: Int, perfect: Bool, cutShort: Bool, score: Int, items: [ItemResult]) {
+    public init(index: Int, dimensionID: String, categoryCount: Int, perfect: Bool, cutShort: Bool, score: Int, items: [ItemResult], backDepth: Int = 0) {
         self.index = index
         self.dimensionID = dimensionID
         self.categoryCount = categoryCount
@@ -92,6 +94,37 @@ public struct RoundResult: Codable, Sendable, Equatable {
         self.cutShort = cutShort
         self.score = score
         self.items = items
+        self.backDepth = backDepth
+    }
+}
+
+extension RoundResult: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case index, dimensionID, categoryCount, perfect, cutShort, score, items, backDepth
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        index = try c.decode(Int.self, forKey: .index)
+        dimensionID = try c.decode(String.self, forKey: .dimensionID)
+        categoryCount = try c.decode(Int.self, forKey: .categoryCount)
+        perfect = try c.decode(Bool.self, forKey: .perfect)
+        cutShort = try c.decode(Bool.self, forKey: .cutShort)
+        score = try c.decode(Int.self, forKey: .score)
+        items = try c.decode([ItemResult].self, forKey: .items)
+        backDepth = try c.decodeIfPresent(Int.self, forKey: .backDepth) ?? 0
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(index, forKey: .index)
+        try c.encode(dimensionID, forKey: .dimensionID)
+        try c.encode(categoryCount, forKey: .categoryCount)
+        try c.encode(perfect, forKey: .perfect)
+        try c.encode(cutShort, forKey: .cutShort)
+        try c.encode(score, forKey: .score)
+        try c.encode(items, forKey: .items)
+        try c.encode(backDepth, forKey: .backDepth)
     }
 }
 

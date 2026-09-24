@@ -38,6 +38,13 @@ struct StatisticsSections: View {
                 row("Interference", value: conflictCost.signedMillisecondsText)
             }
         }
+        if !statistics.accuracyByDepth.isEmpty {
+            Section("Memory") {
+                ForEach(statistics.accuracyByDepth.keys.sorted(), id: \.self) { depth in
+                    row(verbatim: String(localized: "\(depth)-back accuracy"), value: "\(Int((statistics.accuracyByDepth[depth]! * 100).rounded()))%")
+                }
+            }
+        }
     }
 
     private func row(_ title: LocalizedStringKey, value: String) -> some View {

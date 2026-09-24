@@ -105,6 +105,13 @@ struct PlayView: View {
             ZStack {
                 timerRing(for: active, size: itemSize + 18)
                 ItemView(visual: active.item.visual, hint: hint(for: active.item), size: itemSize, hold: active.isHold)
+                if active.isPrimer {
+                    Text("Remember")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.accentColor)
+                        .offset(y: itemSize * 0.5 + 22)
+                        .accessibilityHidden(true)
+                }
             }
             .id(active.index)
             .accessibilityElement(children: .ignore)
@@ -127,7 +134,8 @@ struct PlayView: View {
             let fraction = remaining / active.window
             Circle()
                 .trim(from: 0, to: fraction)
-                .stroke(fraction < 0.3 ? Color.red : Color.white.opacity(0.7), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                .stroke(active.isPrimer ? Color.accentColor : (fraction < 0.3 ? Color.red : Color.white.opacity(0.7)),
+                        style: StrokeStyle(lineWidth: 3, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .frame(width: size, height: size)
         }
@@ -145,7 +153,10 @@ struct PlayView: View {
     }
 
     private func itemLabel(for active: ActiveItem) -> Text {
-        let category = session.categoryLabel(active.expectedCategoryID, in: session.currentPlan)
+        // VoiceOver reads the item on screen; in n-back rounds the expected answer is a different item.
+        let onScreen = active.item.attributes[session.currentPlan.dimensionID] ?? active.expectedCategoryID
+        let category = session.categoryLabel(onScreen, in: session.currentPlan)
+        if active.isPrimer { return Text("Remember, \(category)") }
         return active.isHold ? Text("\(category), hold") : Text(category)
     }
 
@@ -183,7 +194,7 @@ struct PlayView: View {
                 try? await Task.sleep(for: .milliseconds(250))
                 highlightedEdge = nil
             }
-        case .held:
+        case .held, .primed:
             break
         case .wrong, .timedOut, .falseAlarm:
             withAnimation(.easeOut(duration: 0.1)) { flashEdge = true }
@@ -242,7 +253,7 @@ private struct OutcomeModifier: ViewModifier, Animatable {
         case .wrong, .falseAlarm:
             let shake: CGFloat = reduceMotion ? 0 : sin(progress * .pi * 4) * 8 * (1 - progress)
             return CGSize(width: shake, height: 0)
-        case .timedOut, .held:
+        case .timedOut, .held, .primed:
             return .zero
         }
     }
@@ -251,7 +262,7 @@ private struct OutcomeModifier: ViewModifier, Animatable {
         guard !reduceMotion else { return 1 }
         switch outcome {
         case .correct: return 1 + 0.15 * progress
-        case .held: return 1 - 0.1 * progress
+        case .held, .primed: return 1 - 0.1 * progress
         case .wrong, .falseAlarm: return 1
         case .timedOut: return 1 - 0.2 * progress
         }
@@ -259,7 +270,7 @@ private struct OutcomeModifier: ViewModifier, Animatable {
 
     private var opacity: Double {
         switch outcome {
-        case .correct, .timedOut, .held: 1 - progress
+        case .correct, .timedOut, .held, .primed: 1 - progress
         case .wrong, .falseAlarm: 1 - progress * 0.6
         }
     }

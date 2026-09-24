@@ -20,6 +20,11 @@ nonisolated final class PlayScreenScreenshotTests: XCTestCase {
     }
 
     @MainActor
+    func testCaptureTwoBackRound() {
+        capture(named: "play-nback", launchArguments: ["-settings.tapToSort", "NO", "-debugPack", "nback", "-debugStartRound", "3"])
+    }
+
+    @MainActor
     func testCaptureFourEdgeRoundSwipeOnly() {
         capture(named: "play-4edges-swipe", launchArguments: ["-settings.tapToSort", "NO", "-debugStartRound", "5"])
     }

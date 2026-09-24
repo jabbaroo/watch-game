@@ -364,16 +364,25 @@ public struct ContentPack: Sendable, Equatable, Identifiable {
     public var descriptionKey: String?
     /// Go, no-go: the share of items shown as "hold" items that must be left alone. Zero for plain sorting.
     public var holdProbability: Double
+    /// N-back: how many items back each round sorts, zero-based by round; rounds past the end reuse
+    /// the last value. Empty for plain sorting. Depth 1 sorts the previous item, depth 2 the one before that.
+    public var backRamp: [Int]
     public var dimensions: [Dimension]
     public var items: [Item]
 
-    public init(id: String, nameKey: String, descriptionKey: String? = nil, holdProbability: Double = 0, dimensions: [Dimension], items: [Item]) {
+    public init(id: String, nameKey: String, descriptionKey: String? = nil, holdProbability: Double = 0, backRamp: [Int] = [], dimensions: [Dimension], items: [Item]) {
         self.id = id
         self.nameKey = nameKey
         self.descriptionKey = descriptionKey
         self.holdProbability = holdProbability
+        self.backRamp = backRamp
         self.dimensions = dimensions
         self.items = items
+    }
+
+    public func backDepth(roundIndex: Int) -> Int {
+        if backRamp.indices.contains(roundIndex) { return backRamp[roundIndex] }
+        return backRamp.last ?? 0
     }
 
     public func dimension(id: String) -> Dimension? {
@@ -384,6 +393,7 @@ public struct ContentPack: Sendable, Equatable, Identifiable {
         case noDimensions
         case noItems
         case invalidHoldProbability(Double)
+        case invalidBackDepth(Int)
         case duplicateID(String)
         case dimensionNeedsTwoValues(String)
         case itemMissingAttribute(item: String, dimension: String)
@@ -397,6 +407,9 @@ public struct ContentPack: Sendable, Equatable, Identifiable {
         guard !dimensions.isEmpty else { throw ValidationError.noDimensions }
         guard !items.isEmpty else { throw ValidationError.noItems }
         guard (0...0.9).contains(holdProbability) else { throw ValidationError.invalidHoldProbability(holdProbability) }
+        for depth in backRamp where !(0...3).contains(depth) {
+            throw ValidationError.invalidBackDepth(depth)
+        }
 
         var dimensionIDs = Set<String>()
         for dimension in dimensions {
@@ -440,7 +453,7 @@ public struct ContentPack: Sendable, Equatable, Identifiable {
 
 extension ContentPack: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, nameKey, descriptionKey, holdProbability, dimensions, items
+        case id, nameKey, descriptionKey, holdProbability, backRamp, dimensions, items
     }
 
     public init(from decoder: any Decoder) throws {
@@ -449,6 +462,7 @@ extension ContentPack: Codable {
         nameKey = try container.decode(String.self, forKey: .nameKey)
         descriptionKey = try container.decodeIfPresent(String.self, forKey: .descriptionKey)
         holdProbability = try container.decodeIfPresent(Double.self, forKey: .holdProbability) ?? 0
+        backRamp = try container.decodeIfPresent([Int].self, forKey: .backRamp) ?? []
         dimensions = try container.decode([Dimension].self, forKey: .dimensions)
         items = try container.decode([Item].self, forKey: .items)
     }
@@ -460,6 +474,9 @@ extension ContentPack: Codable {
         try container.encodeIfPresent(descriptionKey, forKey: .descriptionKey)
         if holdProbability > 0 {
             try container.encode(holdProbability, forKey: .holdProbability)
+        }
+        if !backRamp.isEmpty {
+            try container.encode(backRamp, forKey: .backRamp)
         }
         try container.encode(dimensions, forKey: .dimensions)
         try container.encode(items, forKey: .items)
@@ -990,13 +1007,16 @@ public struct RoundPlan: Codable, Sendable, Equatable {
     /// Seed for this round's item stream. Drawn during planning so the items a
     /// round shows never depend on how many items earlier rounds consumed.
     public var itemSeed: UInt64
+    /// N-back depth for the round: 0 sorts the item on screen, n sorts the item shown n steps earlier.
+    public var backDepth: Int
 
-    public init(index: Int, dimensionID: String, activeCategoryIDs: [String], mapping: EdgeMapping, itemSeed: UInt64) {
+    public init(index: Int, dimensionID: String, activeCategoryIDs: [String], mapping: EdgeMapping, itemSeed: UInt64, backDepth: Int = 0) {
         self.index = index
         self.dimensionID = dimensionID
         self.activeCategoryIDs = activeCategoryIDs
         self.mapping = mapping
         self.itemSeed = itemSeed
+        self.backDepth = backDepth
     }
 }
 
@@ -1018,7 +1038,8 @@ public enum RoundPlanner {
                 dimensionID: dimension.id,
                 activeCategoryIDs: active,
                 mapping: EdgeMapping(categoryByEdge: categoryByEdge),
-                itemSeed: rng.next()
+                itemSeed: rng.next(),
+                backDepth: pack.backDepth(roundIndex: index)
             )
         }
     }
@@ -1248,6 +1269,17 @@ import Testing
         #expect(try JSONDecoder().decode(RunSummary.self, from: data) == summary)
     }
 
+    @Test func roundResultDecodesWithoutTheBackDepthKey() throws {
+        let legacy = """
+        {"index":0,"dimensionID":"colour","categoryCount":2,"perfect":false,"cutShort":false,"score":0,"items":[]}
+        """
+        let round = try JSONDecoder().decode(RoundResult.self, from: Data(legacy.utf8))
+        #expect(round.backDepth == 0)
+        var deep = round
+        deep.backDepth = 2
+        #expect(try JSONDecoder().decode(RoundResult.self, from: JSONEncoder().encode(deep)).backDepth == 2)
+    }
+
     @Test func itemResultDecodesWithoutTheHoldKey() throws {
         let legacy = """
         {"roundIndex":0,"itemIndex":1,"dimensionID":"colour","attributes":{"colour":"red"},"expectedCategoryID":"red",
@@ -1349,7 +1381,7 @@ extension ItemResult: Codable {
 }
 
 /// One finished round, including one cut short by running out of lives.
-public struct RoundResult: Codable, Sendable, Equatable {
+public struct RoundResult: Sendable, Equatable {
     public var index: Int
     public var dimensionID: String
     public var categoryCount: Int
@@ -1358,8 +1390,10 @@ public struct RoundResult: Codable, Sendable, Equatable {
     /// Item points plus any perfect-round bonus.
     public var score: Int
     public var items: [ItemResult]
+    /// N-back depth the round was played at; 0 for plain sorting.
+    public var backDepth: Int
 
-    public init(index: Int, dimensionID: String, categoryCount: Int, perfect: Bool, cutShort: Bool, score: Int, items: [ItemResult]) {
+    public init(index: Int, dimensionID: String, categoryCount: Int, perfect: Bool, cutShort: Bool, score: Int, items: [ItemResult], backDepth: Int = 0) {
         self.index = index
         self.dimensionID = dimensionID
         self.categoryCount = categoryCount
@@ -1367,6 +1401,37 @@ public struct RoundResult: Codable, Sendable, Equatable {
         self.cutShort = cutShort
         self.score = score
         self.items = items
+        self.backDepth = backDepth
+    }
+}
+
+extension RoundResult: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case index, dimensionID, categoryCount, perfect, cutShort, score, items, backDepth
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        index = try c.decode(Int.self, forKey: .index)
+        dimensionID = try c.decode(String.self, forKey: .dimensionID)
+        categoryCount = try c.decode(Int.self, forKey: .categoryCount)
+        perfect = try c.decode(Bool.self, forKey: .perfect)
+        cutShort = try c.decode(Bool.self, forKey: .cutShort)
+        score = try c.decode(Int.self, forKey: .score)
+        items = try c.decode([ItemResult].self, forKey: .items)
+        backDepth = try c.decodeIfPresent(Int.self, forKey: .backDepth) ?? 0
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(index, forKey: .index)
+        try c.encode(dimensionID, forKey: .dimensionID)
+        try c.encode(categoryCount, forKey: .categoryCount)
+        try c.encode(perfect, forKey: .perfect)
+        try c.encode(cutShort, forKey: .cutShort)
+        try c.encode(score, forKey: .score)
+        try c.encode(items, forKey: .items)
+        try c.encode(backDepth, forKey: .backDepth)
     }
 }
 
@@ -1418,8 +1483,11 @@ public struct ActiveItem: Sendable, Equatable {
     public var window: Duration
     /// Go, no-go: a hold item must be left alone until its window closes.
     public var isHold: Bool
+    /// N-back: one of the first items of a round, shown to be remembered. Input is ignored and
+    /// its window closing is neutral: no points, no life, no record.
+    public var isPrimer: Bool
 
-    public init(index: Int, item: Item, expectedCategoryID: String, expectedEdge: SwipeEdge, shownAt: Duration, deadline: Duration, window: Duration, isHold: Bool = false) {
+    public init(index: Int, item: Item, expectedCategoryID: String, expectedEdge: SwipeEdge, shownAt: Duration, deadline: Duration, window: Duration, isHold: Bool = false, isPrimer: Bool = false) {
         self.index = index
         self.item = item
         self.expectedCategoryID = expectedCategoryID
@@ -1428,6 +1496,7 @@ public struct ActiveItem: Sendable, Equatable {
         self.deadline = deadline
         self.window = window
         self.isHold = isHold
+        self.isPrimer = isPrimer
     }
 }
 
@@ -1439,6 +1508,8 @@ public enum ItemOutcome: Sendable, Equatable {
     case held(points: Int, streak: Int)
     /// A hold item that was flicked: wrong, costs a life.
     case falseAlarm
+    /// An n-back primer that finished showing. Neutral.
+    case primed
 }
 
 /// The engine says when feedback happens; the app's services decide what it feels and sounds like.
@@ -1902,6 +1973,8 @@ public struct RunState: Sendable, Equatable {
 
     private var sequencer: ItemSequencer?
     private var nextItemIndex = 0
+    /// Categories of the items shown so far this round, for n-back rounds.
+    private var shownCategories: [String] = []
     private var roundResumedAt: Duration = .zero
     private var roundElapsedBeforeResume: Duration = .zero
 
@@ -1945,9 +2018,9 @@ public struct RunState: Sendable, Equatable {
                 return endRound(cutShort: false)
             }
             if now >= active.deadline {
-                return resolve(active, answeredEdge: nil, at: now)
+                return active.isPrimer ? finishPrimer(active, at: now) : resolve(active, answeredEdge: nil, at: now)
             }
-            guard currentPlan.mapping.category(at: edge) != nil else {
+            guard !active.isPrimer, currentPlan.mapping.category(at: edge) != nil else {
                 return [.wake(at: min(active.deadline, roundDeadline(at: now)))]
             }
             return resolve(active, answeredEdge: edge, at: now)
@@ -1957,7 +2030,7 @@ public struct RunState: Sendable, Equatable {
                 return endRound(cutShort: false)
             }
             if now >= active.deadline {
-                return resolve(active, answeredEdge: nil, at: now)
+                return active.isPrimer ? finishPrimer(active, at: now) : resolve(active, answeredEdge: nil, at: now)
             }
             return [.wake(at: min(active.deadline, roundDeadline(at: now)))]
 
@@ -2026,6 +2099,7 @@ public struct RunState: Sendable, Equatable {
     private mutating func beginRound(_ plan: RoundPlan, at now: Duration) -> [RunEffect] {
         sequencer = ItemSequencer(pack: pack, plan: plan, maximumConsecutiveSameTarget: configuration.maximumConsecutiveSameTarget)
         nextItemIndex = 0
+        shownCategories = []
         streak = 0
         currentRoundItems = []
         roundResumedAt = now
@@ -2039,23 +2113,41 @@ public struct RunState: Sendable, Equatable {
         guard var sequencer else { preconditionFailure("No sequencer for the current round") }
         let draw = sequencer.next()
         self.sequencer = sequencer
-        guard let edge = currentPlan.mapping.edge(for: draw.categoryID) else {
+        // N-back: the first `depth` items are primers; after that the answer is the item shown `depth` steps earlier.
+        let depth = currentPlan.backDepth
+        let isPrimer = nextItemIndex < depth
+        let expectedCategoryID = depth > 0 && !isPrimer ? shownCategories[nextItemIndex - depth] : draw.categoryID
+        shownCategories.append(draw.categoryID)
+        guard let edge = currentPlan.mapping.edge(for: expectedCategoryID) else {
             preconditionFailure("The planner maps every active category to an edge")
         }
-        let window = configuration.itemWindow(roundIndex: roundIndex, streak: streak, isFirstItem: nextItemIndex == 0)
+        let window = configuration.itemWindow(roundIndex: roundIndex, streak: streak, isFirstItem: nextItemIndex == depth)
         let active = ActiveItem(
             index: nextItemIndex,
             item: draw.item,
-            expectedCategoryID: draw.categoryID,
+            expectedCategoryID: expectedCategoryID,
             expectedEdge: edge,
             shownAt: now,
             deadline: now + window,
             window: window,
-            isHold: draw.hold
+            isHold: draw.hold && !isPrimer,
+            isPrimer: isPrimer
         )
         nextItemIndex += 1
         phase = .playing(active)
         return [.itemShown(active), .wake(at: min(active.deadline, roundDeadline(at: now)))]
+    }
+
+    /// A primer finished showing: no record, no score, no life. The UI gets a neutral outcome.
+    private mutating func finishPrimer(_ active: ActiveItem, at now: Duration) -> [RunEffect] {
+        let result = ItemResult(
+            roundIndex: roundIndex, itemIndex: active.index, dimensionID: currentPlan.dimensionID,
+            attributes: active.item.attributes, expectedCategoryID: active.expectedCategoryID,
+            answeredCategoryID: nil, correct: true, timedOut: false, reaction: nil, window: active.window, points: 0
+        )
+        let nextItemAt = now + configuration.interItemDelay
+        phase = .betweenItems(nextItemAt: nextItemAt)
+        return [.itemResolved(result, .primed), .wake(at: min(nextItemAt, roundDeadline(at: now)))]
     }
 
     private mutating func resolve(_ active: ActiveItem, answeredEdge: SwipeEdge?, at now: Duration) -> [RunEffect] {
@@ -2125,6 +2217,8 @@ public struct RunState: Sendable, Equatable {
         case .timedOut:
             effects.append(.livesChanged(lives))
             effects.append(.feedback(.timedOut))
+        case .primed:
+            break // primers resolve in finishPrimer, never here
         }
 
         if lives <= 0 {
@@ -2163,7 +2257,8 @@ public struct RunState: Sendable, Equatable {
             perfect: perfect,
             cutShort: cutShort,
             score: roundScore,
-            items: currentRoundItems
+            items: currentRoundItems,
+            backDepth: plan.backDepth
         )
         completedRounds.append(result)
         currentRoundItems = []
@@ -2590,6 +2685,8 @@ public struct RunStatistics: Sendable, Equatable {
     /// Mean over qualifying rounds of (mean of first `leadingItemCount` correct reactions
     /// minus mean of the remaining correct reactions). Nil when no round qualifies.
     public var switchCost: Duration?
+    /// N-back: accuracy per depth over rounds played at that depth, depths above zero only.
+    public var accuracyByDepth: [Int: Double]
     /// Stroop interference: mean correct reaction time on incongruent items minus congruent ones.
     /// An item is congruent when every dimension carries the same value id (a word in its own
     /// colour). Nil unless there are at least `minimumConflictItems` correct items of each kind.
@@ -2648,6 +2745,14 @@ public struct RunStatistics: Sendable, Equatable {
             return leading - rest
         }
 
+        var accuracyByDepth: [Int: Double] = [:]
+        for (depth, group) in Dictionary(grouping: rounds.filter { $0.backDepth > 0 }, by: \.backDepth) {
+            let depthItems = group.flatMap(\.items)
+            if !depthItems.isEmpty {
+                accuracyByDepth[depth] = Double(depthItems.filter(\.correct).count) / Double(depthItems.count)
+            }
+        }
+
         let congruent = correct.filter(\.isCongruent).compactMap(\.reaction)
         let incongruent = correct.filter { !$0.isCongruent }.compactMap(\.reaction)
         var conflictCost: Duration?
@@ -2667,6 +2772,7 @@ public struct RunStatistics: Sendable, Equatable {
             confusionPairs: confusionPairs,
             meanReaction: mean(correct.compactMap(\.reaction)),
             switchCost: mean(switchCosts),
+            accuracyByDepth: accuracyByDepth,
             conflictCost: conflictCost
         )
     }
@@ -3764,6 +3870,14 @@ private final class TestBundleMarker {}
         #expect(ContentPack.shapesAndColours.holdProbability == 0)
     }
 
+    @Test func twoBackPackRampsFromOneBackToTwoBack() throws {
+        let pack = try #require(PackLoader.loadPacks(from: .main).first { $0.id == "nback" })
+        #expect(pack.backRamp == [1, 1, 2, 2, 2, 2, 2, 2])
+        #expect(pack.holdProbability == 0)
+        #expect(pack.items.count == 16)
+        #expect(ContentPack.shapesAndColours.backRamp.isEmpty)
+    }
+
     @Test func stroopPackSharesValueIDsAcrossDimensions() throws {
         let stroop = try #require(PackLoader.loadPacks(from: .main).first { $0.id == "stroop" })
         #expect(stroop.items.count == 16)
@@ -4021,6 +4135,26 @@ Replace `WatchGame/Localizable.xcstrings` with:
         }
       }
     },
+    "pack.nback": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Two-back"
+          }
+        }
+      }
+    },
+    "pack.nback.description": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sort the item from two back"
+          }
+        }
+      }
+    },
     "pack.shapes-colours": {
       "localizations": {
         "en": {
@@ -4181,6 +4315,15 @@ import SwipeSortEngine
         #expect(UInt64(bitPattern: run.seed) == 7)
     }
 
+    @Test func roundDepthRoundTrips() throws {
+        let store = try makeStore()
+        let run = store.beginRun(packID: "nback", isDaily: false, dailyKey: nil, seed: 3)
+        var deep = round(0)
+        deep.backDepth = 2
+        store.append(deep, to: run)
+        #expect(run.roundResults.first?.backDepth == 2)
+    }
+
     @Test func abandonedRunsAreMarkedIncomplete() throws {
         let store = try makeStore()
         let run = store.beginRun(packID: "shapes-colours", isDaily: false, dailyKey: nil, seed: 1)
@@ -4302,6 +4445,7 @@ final class RoundEntry {
     var perfect: Bool = false
     var cutShort: Bool = false
     var score: Int = 0
+    var backDepth: Int = 0
     var run: RunEntry?
     @Relationship(deleteRule: .cascade, inverse: \ItemEntry.round)
     var items: [ItemEntry]? = []
@@ -4313,6 +4457,7 @@ final class RoundEntry {
         perfect = result.perfect
         cutShort = result.cutShort
         score = result.score
+        backDepth = result.backDepth
         items = result.items.map(ItemEntry.init(result:))
     }
 
@@ -4324,7 +4469,8 @@ final class RoundEntry {
             perfect: perfect,
             cutShort: cutShort,
             score: score,
-            items: (items ?? []).sorted { $0.itemIndex < $1.itemIndex }.map(\.result)
+            items: (items ?? []).sorted { $0.itemIndex < $1.itemIndex }.map(\.result),
+            backDepth: backDepth
         )
     }
 }
@@ -5797,6 +5943,15 @@ struct RoundIntroView: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
+                if plan.backDepth == 1 {
+                    Text("Sort the previous item")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                } else if plan.backDepth > 1 {
+                    Text("Sort the item from \(plan.backDepth) back")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
                 mappingPreview(plan)
                     .frame(height: 70)
                 HStack(spacing: 12) {
@@ -6025,6 +6180,13 @@ struct PlayView: View {
             ZStack {
                 timerRing(for: active, size: itemSize + 18)
                 ItemView(visual: active.item.visual, hint: hint(for: active.item), size: itemSize, hold: active.isHold)
+                if active.isPrimer {
+                    Text("Remember")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.accentColor)
+                        .offset(y: itemSize * 0.5 + 22)
+                        .accessibilityHidden(true)
+                }
             }
             .id(active.index)
             .accessibilityElement(children: .ignore)
@@ -6047,7 +6209,8 @@ struct PlayView: View {
             let fraction = remaining / active.window
             Circle()
                 .trim(from: 0, to: fraction)
-                .stroke(fraction < 0.3 ? Color.red : Color.white.opacity(0.7), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                .stroke(active.isPrimer ? Color.accentColor : (fraction < 0.3 ? Color.red : Color.white.opacity(0.7)),
+                        style: StrokeStyle(lineWidth: 3, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .frame(width: size, height: size)
         }
@@ -6065,7 +6228,10 @@ struct PlayView: View {
     }
 
     private func itemLabel(for active: ActiveItem) -> Text {
-        let category = session.categoryLabel(active.expectedCategoryID, in: session.currentPlan)
+        // VoiceOver reads the item on screen; in n-back rounds the expected answer is a different item.
+        let onScreen = active.item.attributes[session.currentPlan.dimensionID] ?? active.expectedCategoryID
+        let category = session.categoryLabel(onScreen, in: session.currentPlan)
+        if active.isPrimer { return Text("Remember, \(category)") }
         return active.isHold ? Text("\(category), hold") : Text(category)
     }
 
@@ -6103,7 +6269,7 @@ struct PlayView: View {
                 try? await Task.sleep(for: .milliseconds(250))
                 highlightedEdge = nil
             }
-        case .held:
+        case .held, .primed:
             break
         case .wrong, .timedOut, .falseAlarm:
             withAnimation(.easeOut(duration: 0.1)) { flashEdge = true }
@@ -6162,7 +6328,7 @@ private struct OutcomeModifier: ViewModifier, Animatable {
         case .wrong, .falseAlarm:
             let shake: CGFloat = reduceMotion ? 0 : sin(progress * .pi * 4) * 8 * (1 - progress)
             return CGSize(width: shake, height: 0)
-        case .timedOut, .held:
+        case .timedOut, .held, .primed:
             return .zero
         }
     }
@@ -6171,7 +6337,7 @@ private struct OutcomeModifier: ViewModifier, Animatable {
         guard !reduceMotion else { return 1 }
         switch outcome {
         case .correct: return 1 + 0.15 * progress
-        case .held: return 1 - 0.1 * progress
+        case .held, .primed: return 1 - 0.1 * progress
         case .wrong, .falseAlarm: return 1
         case .timedOut: return 1 - 0.2 * progress
         }
@@ -6179,7 +6345,7 @@ private struct OutcomeModifier: ViewModifier, Animatable {
 
     private var opacity: Double {
         switch outcome {
-        case .correct, .timedOut, .held: 1 - progress
+        case .correct, .timedOut, .held, .primed: 1 - progress
         case .wrong, .falseAlarm: 1 - progress * 0.6
         }
     }
@@ -6387,6 +6553,13 @@ struct StatisticsSections: View {
             row("Switch cost", value: statistics.switchCost?.signedMillisecondsText ?? "–")
             if let conflictCost = statistics.conflictCost {
                 row("Interference", value: conflictCost.signedMillisecondsText)
+            }
+        }
+        if !statistics.accuracyByDepth.isEmpty {
+            Section("Memory") {
+                ForEach(statistics.accuracyByDepth.keys.sorted(), id: \.self) { depth in
+                    row(verbatim: String(localized: "\(depth)-back accuracy"), value: "\(Int((statistics.accuracyByDepth[depth]! * 100).rounded()))%")
+                }
             }
         }
     }
@@ -7286,6 +7459,11 @@ nonisolated final class PlayScreenScreenshotTests: XCTestCase {
     @MainActor
     func testCaptureGoNoGoRound() {
         capture(named: "play-gonogo", launchArguments: ["-settings.tapToSort", "NO", "-debugPack", "gonogo", "-debugStartRound", "3"])
+    }
+
+    @MainActor
+    func testCaptureTwoBackRound() {
+        capture(named: "play-nback", launchArguments: ["-settings.tapToSort", "NO", "-debugPack", "nback", "-debugStartRound", "3"])
     }
 
     @MainActor

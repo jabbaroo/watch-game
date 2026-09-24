@@ -141,6 +141,26 @@
         }
       }
     },
+    "pack.nback": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Two-back"
+          }
+        }
+      }
+    },
+    "pack.nback.description": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sort the item from two back"
+          }
+        }
+      }
+    },
     "pack.shapes-colours": {
       "localizations": {
         "en": {
