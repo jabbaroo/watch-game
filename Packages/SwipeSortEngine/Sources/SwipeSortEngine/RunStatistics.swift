@@ -12,7 +12,7 @@ public struct DimensionErrorRate: Sendable, Equatable {
     public var rate: Double { total > 0 ? Double(errors) / Double(total) : 0 }
 }
 
-public struct ConfusionPair: Sendable, Equatable {
+public struct ConfusionPair: Sendable, Hashable {
     public var expectedCategoryID: String
     public var answeredCategoryID: String
     public var count: Int

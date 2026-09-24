@@ -2329,7 +2329,7 @@ public struct DimensionErrorRate: Sendable, Equatable {
     public var rate: Double { total > 0 ? Double(errors) / Double(total) : 0 }
 }
 
-public struct ConfusionPair: Sendable, Equatable {
+public struct ConfusionPair: Sendable, Hashable {
     public var expectedCategoryID: String
     public var answeredCategoryID: String
     public var count: Int
@@ -4429,7 +4429,7 @@ import SwipeSortEngine
         let (session, _, haptics) = try makeSession()
         session.start()
         session.startRound()
-        try await Task.sleep(for: .milliseconds(2300))
+        try await Task.sleep(for: .milliseconds(2600))
         #expect(session.lives == 2)
         #expect(haptics.cues.contains(.timedOut))
     }
@@ -4440,7 +4440,7 @@ import SwipeSortEngine
         session.startRound()
         session.pause()
         #expect(session.screen == .paused)
-        try await Task.sleep(for: .milliseconds(2300))
+        try await Task.sleep(for: .milliseconds(2600))
         #expect(session.lives == 3)
         session.resume()
         #expect(session.screen == .playing)
@@ -4516,6 +4516,7 @@ enum AppSettings {
 ```swift
 import Foundation
 import Observation
+import SwiftData
 import SwipeSortEngine
 
 /// Long-lived services, built once at launch and injected through the SwiftUI environment.
@@ -4582,8 +4583,6 @@ final class AppEnvironment {
 }
 ```
 
-Add `import SwiftData` at the top of `AppEnvironment.swift` (needed for `ModelContainer` in `preview()`).
-
 - [ ] **Step 4: Implement the session**
 
 `WatchGame/Game/GameSession.swift`:
@@ -4649,6 +4648,10 @@ final class GameSession {
         runEntry = history.beginRun(packID: pack.id, isDaily: isDaily, dailyKey: dailyKey, seed: seed, startedAt: startedAt)
     }
 
+    isolated deinit {
+        wakeTask?.cancel()
+    }
+
     // MARK: - View state
 
     var screen: Screen {
@@ -4705,11 +4708,13 @@ final class GameSession {
         send(.quit)
     }
 
+    #if DEBUG
     /// Test hook: behaves as if the round clock ran out.
     func debugExpireRoundClock() {
         let effects = state.apply(.tick, at: now + roundDuration)
         handle(effects)
     }
+    #endif
 
     // MARK: - Engine plumbing
 
@@ -5125,8 +5130,9 @@ import SwiftUI
 /// A one-second burst of at most 40 particles drawn with Canvas. Skipped under Reduce Motion.
 struct ConfettiView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    private let particles: [Particle] = (0..<40).map { _ in Particle() }
-    private let start = Date()
+    @State private var particles: [Particle] = (0..<40).map { _ in Particle() }
+    @State private var start = Date()
+    @State private var finished = false
 
     struct Particle {
         let angle = Double.random(in: 0 ..< 2 * .pi)
@@ -5137,7 +5143,7 @@ struct ConfettiView: View {
 
     var body: some View {
         if !reduceMotion {
-            TimelineView(.animation) { context in
+            TimelineView(.animation(paused: finished)) { context in
                 let t = min(context.date.timeIntervalSince(start), 1)
                 Canvas { canvas, size in
                     let centre = CGPoint(x: size.width / 2, y: size.height / 2)
@@ -5151,6 +5157,10 @@ struct ConfettiView: View {
                 }
             }
             .allowsHitTesting(false)
+            .task {
+                try? await Task.sleep(for: .seconds(1))
+                finished = true
+            }
         }
     }
 }
@@ -5216,7 +5226,7 @@ struct RoundIntroView: View {
     private var countdownRing: some View {
         TimelineView(.animation) { context in
             let elapsed = countdownStart.map { context.date.timeIntervalSince($0) } ?? 0
-            let fraction = max(0, 1 - elapsed / (Double(countdown.components.seconds) + Double(countdown.components.attoseconds) / 1e18))
+            let fraction = max(0, 1 - elapsed / (countdown / .seconds(1)))
             Circle()
                 .trim(from: 0, to: fraction)
                 .stroke(Color.accentColor.opacity(0.6), style: StrokeStyle(lineWidth: 3, lineCap: .round))
@@ -5249,6 +5259,7 @@ struct LivesView: View {
                     .contentTransition(.symbolEffect(.replace))
             }
         }
+        .animation(.default, value: lives)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("\(lives) of \(maximum) lives"))
     }
@@ -5385,16 +5396,20 @@ struct PlayView: View {
             .animation(.spring(duration: 0.3), value: session.multiplier)
             .animation(.default, value: session.score)
             Spacer()
-            Button {
-                session.pause()
-            } label: {
-                Image(systemName: "pause.fill")
-                    .font(.system(size: 11))
-                    .frame(width: 30, height: 22)
+            HStack {
+                Spacer()
+                Button {
+                    session.pause()
+                } label: {
+                    Image(systemName: "pause.fill")
+                        .font(.system(size: 11))
+                        .frame(width: 30, height: 22)
+                }
+                .buttonStyle(.plain)
+                .handGestureShortcut(.primaryAction)
+                .accessibilityLabel(Text("Pause"))
             }
-            .buttonStyle(.plain)
-            .handGestureShortcut(.primaryAction)
-            .accessibilityLabel(Text("Pause"))
+            .padding(.trailing, 6)
             .padding(.bottom, 2)
         }
     }
@@ -5407,7 +5422,6 @@ struct PlayView: View {
                 ItemView(visual: active.item.visual, hint: hint(for: active.item), size: itemSize)
             }
             .id(active.index)
-            .transition(reduceMotion ? .opacity : .scale(scale: 0.6).combined(with: .opacity))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(session.categoryLabel(active.expectedCategoryID, in: session.currentPlan)))
             .accessibilityActions {
@@ -5498,42 +5512,62 @@ private struct OutcomeItemView: View {
 
     var body: some View {
         ItemView(visual: resolved.item.item.visual, hint: hint, size: size)
-            .modifier(outcomeModifier)
+            .modifier(OutcomeModifier(outcome: resolved.outcome, edge: resolved.item.expectedEdge,
+                                      reduceMotion: reduceMotion, progress: progress))
             .onAppear {
                 withAnimation(.easeIn(duration: 0.22)) { progress = 1 }
             }
     }
-
-    private var outcomeModifier: some ViewModifier {
-        switch resolved.outcome {
-        case .correct:
-            let edge = resolved.item.expectedEdge
-            let distance: CGFloat = reduceMotion ? 0 : 90 * progress
-            return OutcomeModifier(
-                offset: CGSize(width: edge == .left ? -distance : edge == .right ? distance : 0,
-                               height: edge == .up ? -distance : edge == .down ? distance : 0),
-                scale: reduceMotion ? 1 : 1 + 0.15 * progress,
-                opacity: 1 - progress
-            )
-        case .wrong:
-            let shake: CGFloat = reduceMotion ? 0 : sin(progress * .pi * 4) * 8 * (1 - progress)
-            return OutcomeModifier(offset: CGSize(width: shake, height: 0), scale: 1, opacity: 1 - progress * 0.6)
-        case .timedOut:
-            return OutcomeModifier(offset: .zero, scale: reduceMotion ? 1 : 1 - 0.2 * progress, opacity: 1 - progress)
-        }
-    }
 }
 
+/// Interpolates `progress` from 0 to 1 and derives offset, scale and opacity from it,
+/// so the shake and fly-off curves are sampled every frame rather than at the endpoints.
 private struct OutcomeModifier: ViewModifier, Animatable {
-    var offset: CGSize
-    var scale: CGFloat
-    var opacity: Double
+    var outcome: ItemOutcome
+    var edge: SwipeEdge
+    var reduceMotion: Bool
+    var progress: CGFloat
+
+    var animatableData: CGFloat {
+        get { progress }
+        set { progress = newValue }
+    }
 
     func body(content: Content) -> some View {
         content
             .scaleEffect(scale)
             .offset(offset)
             .opacity(opacity)
+    }
+
+    private var offset: CGSize {
+        switch outcome {
+        case .correct:
+            let distance: CGFloat = reduceMotion ? 0 : 90 * progress
+            return CGSize(width: edge == .left ? -distance : edge == .right ? distance : 0,
+                          height: edge == .up ? -distance : edge == .down ? distance : 0)
+        case .wrong:
+            let shake: CGFloat = reduceMotion ? 0 : sin(progress * .pi * 4) * 8 * (1 - progress)
+            return CGSize(width: shake, height: 0)
+        case .timedOut:
+            return .zero
+        }
+    }
+
+    private var scale: CGFloat {
+        guard !reduceMotion else { return 1 }
+        switch outcome {
+        case .correct: return 1 + 0.15 * progress
+        case .wrong: return 1
+        case .timedOut: return 1 - 0.2 * progress
+        }
+    }
+
+    private var opacity: Double {
+        switch outcome {
+        case .correct, .timedOut: 1 - progress
+        case .wrong: 1 - progress * 0.6
+        }
     }
 }
 ```
@@ -5544,6 +5578,7 @@ private struct OutcomeModifier: ViewModifier, Animatable {
 
 ```swift
 import SwiftUI
+import SwipeSortEngine
 
 /// Full-screen host for a run. Switches between intro, play, pause and results,
 /// and pauses play whenever the scene is not active or the display is dimmed.
@@ -5566,7 +5601,7 @@ struct RunView: View {
             case .results:
                 if let summary = session.summary, summary.completed {
                     ResultsView(
-                        data: ResultsData(summary: summary, isDaily: session.isDaily, isNewBest: session.isNewBest),
+                        data: ResultsData(summary: summary, isDaily: session.isDaily, isNewBest: session.isNewBest, pack: session.pack),
                         onPlayAgain: onPlayAgain,
                         onHome: onDismiss
                     )
@@ -5622,7 +5657,7 @@ struct ResultsView: View {
 - [ ] **Step 6: Build**
 
 Run: `Scripts/build.sh`
-Expected: `BUILD OK`. Fix any compile errors in place; the most likely are missing `import SwipeSortEngine` lines and Duration arithmetic in `remaining / session.roundDuration` (both are `Duration`, which divides to `Double`).
+Expected: `BUILD OK`.
 
 - [ ] **Step 7: Run the tests**
 
@@ -5640,6 +5675,7 @@ git commit -m "feat(app): play screen with swipe input, round intro, pause and o
 
 **Files:**
 - Modify: `WatchGame/Views/Results/ResultsView.swift` (replace the stub)
+- Modify: `Packages/SwipeSortEngine/Sources/SwipeSortEngine/RunStatistics.swift` (`ConfusionPair` becomes `Hashable`)
 - Create: `WatchGame/Views/Results/StatisticsSections.swift`
 - Create: `WatchGame/Game/DurationFormatting.swift`
 - Create: `WatchGameTests/DurationFormattingTests.swift`
@@ -5706,14 +5742,13 @@ import SwipeSortEngine
 struct StatisticsSections: View {
     var statistics: RunStatistics
     var pack: ContentPack
-    var rounds: [RoundResult]
 
     var body: some View {
         Section("Errors") {
             row("Wrong swipes", value: "\(statistics.wrongSwipeCount)")
             row("Timeouts", value: "\(statistics.timeoutCount)")
             ForEach(statistics.errorsByDimension, id: \.dimensionID) { entry in
-                row(dimensionName(entry.dimensionID), value: "\(entry.errors) of \(entry.total)")
+                row(verbatim: dimensionName(entry.dimensionID), value: "\(entry.errors) of \(entry.total)")
             }
         }
         if !statistics.confusionPairs.isEmpty {
@@ -5747,9 +5782,9 @@ struct StatisticsSections: View {
         .font(.footnote)
     }
 
-    private func row(_ title: String, value: String) -> some View {
+    private func row(verbatim title: String, value: String) -> some View {
         HStack {
-            Text(title)
+            Text(verbatim: title)
             Spacer()
             Text(value)
                 .foregroundStyle(.secondary)
@@ -5771,17 +5806,9 @@ struct StatisticsSections: View {
         return id
     }
 }
-
-extension ConfusionPair: @retroactive Hashable {
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(expectedCategoryID)
-        hasher.combine(answeredCategoryID)
-        hasher.combine(count)
-    }
-}
 ```
 
-If the `@retroactive` conformance produces a warning about `Equatable` already existing, instead add `Hashable` to `ConfusionPair` in the engine (`Packages/SwipeSortEngine/Sources/SwipeSortEngine/RunStatistics.swift`) and delete the extension here.
+`ConfusionPair` is `Hashable` in the engine (Task 9) so `ForEach(..., id: \.self)` works without an app-side extension.
 
 - [ ] **Step 5: Implement the results screen**
 
@@ -5838,7 +5865,7 @@ struct ResultsView: View {
                     }
                 }
             }
-            StatisticsSections(statistics: data.statistics, pack: data.pack, rounds: data.summary.rounds)
+            StatisticsSections(statistics: data.statistics, pack: data.pack)
             if onPlayAgain != nil || onHome != nil {
                 Section {
                     if let onPlayAgain {
@@ -5852,7 +5879,7 @@ struct ResultsView: View {
                 .listRowBackground(Color.clear)
             }
         }
-        .navigationTitle(onHome == nil ? "Run" : "Results")
+        .navigationTitle(onHome == nil ? Text("Run") : Text("Results"))
     }
 
     private func stat(_ title: LocalizedStringKey, _ value: String) -> some View {

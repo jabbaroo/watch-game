@@ -1,6 +1,6 @@
-import SwiftData
 import Foundation
 import Observation
+import SwiftData
 import SwipeSortEngine
 
 /// Long-lived services, built once at launch and injected through the SwiftUI environment.

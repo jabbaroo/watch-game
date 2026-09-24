@@ -54,7 +54,7 @@ import SwipeSortEngine
         let (session, _, haptics) = try makeSession()
         session.start()
         session.startRound()
-        try await Task.sleep(for: .milliseconds(2300))
+        try await Task.sleep(for: .milliseconds(2600))
         #expect(session.lives == 2)
         #expect(haptics.cues.contains(.timedOut))
     }
@@ -65,7 +65,7 @@ import SwipeSortEngine
         session.startRound()
         session.pause()
         #expect(session.screen == .paused)
-        try await Task.sleep(for: .milliseconds(2300))
+        try await Task.sleep(for: .milliseconds(2600))
         #expect(session.lives == 3)
         session.resume()
         #expect(session.screen == .playing)

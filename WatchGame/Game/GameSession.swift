@@ -58,6 +58,10 @@ final class GameSession {
         runEntry = history.beginRun(packID: pack.id, isDaily: isDaily, dailyKey: dailyKey, seed: seed, startedAt: startedAt)
     }
 
+    isolated deinit {
+        wakeTask?.cancel()
+    }
+
     // MARK: - View state
 
     var screen: Screen {
@@ -114,11 +118,13 @@ final class GameSession {
         send(.quit)
     }
 
+    #if DEBUG
     /// Test hook: behaves as if the round clock ran out.
     func debugExpireRoundClock() {
         let effects = state.apply(.tick, at: now + roundDuration)
         handle(effects)
     }
+    #endif
 
     // MARK: - Engine plumbing
 
