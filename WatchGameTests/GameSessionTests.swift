@@ -46,15 +46,17 @@ import SwipeSortEngine
         let first = try #require(session.activeItem)
         session.answer(first.expectedEdge)
         #expect(session.activeItem == nil)
-        try await Task.sleep(for: .milliseconds(600))
-        #expect(session.activeItem?.index == 1)
+        // The 250 ms gap ends on the session's own wake task; poll rather than sleep a fixed time,
+        // because a loaded machine can starve the main actor for longer than the gap.
+        #expect(await waitUntil(timeout: .seconds(3)) { session.activeItem?.index == 1 })
     }
 
     @Test func itemTimesOutWithoutExternalTick() async throws {
         let (session, _, haptics) = try makeSession()
         session.start()
         session.startRound()
-        try await Task.sleep(for: .milliseconds(3600))
+        // The first item's window is 3 s (2 s plus grace); the next item cannot time out before 5.25 s.
+        #expect(await waitUntil(timeout: .seconds(5)) { session.lives == 2 })
         #expect(session.lives == 2)
         #expect(haptics.cues.contains(.timedOut))
     }
@@ -97,6 +99,18 @@ import SwipeSortEngine
         #expect(session.lastRound?.perfect == true)
         #expect(history.allRuns()[0].roundResults.count == 1)
     }
+}
+
+/// Polls `condition` on the main actor until it holds or `timeout` passes. Returns whether it held.
+@MainActor
+func waitUntil(timeout: Duration, _ condition: () -> Bool) async -> Bool {
+    let clock = ContinuousClock()
+    let deadline = clock.now + timeout
+    while clock.now < deadline {
+        if condition() { return true }
+        try? await Task.sleep(for: .milliseconds(50))
+    }
+    return condition()
 }
 
 @MainActor
