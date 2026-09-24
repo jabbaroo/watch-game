@@ -4034,7 +4034,7 @@ git commit -m "feat(app): SwiftData history models and store"
 - Create: `WatchGame/Feedback/HapticsService.swift`
 - Create: `WatchGame/Feedback/SoundService.swift`
 - Create: `Tools/generate_sounds.py`
-- Create: `WatchGame/Resources/Sounds/correct.wav`, `wrong.wav`, `timeout.wav`, `roundStart.wav`, `perfect.wav`, `runEnd.wav` (generated)
+- Create: `WatchGame/Resources/Sounds/correct-00.wav` to `correct-12.wav`, `wrong.wav`, `timeout.wav`, `roundStart.wav`, `perfect.wav`, `runEnd.wav` (generated)
 - Create: `WatchGameTests/FeedbackMappingTests.swift`
 
 - [ ] **Step 1: Write the failing test**
@@ -4042,6 +4042,7 @@ git commit -m "feat(app): SwiftData history models and store"
 `WatchGameTests/FeedbackMappingTests.swift`:
 
 ```swift
+import Foundation
 import Testing
 import WatchKit
 import SwipeSortEngine
@@ -4061,20 +4062,21 @@ import SwipeSortEngine
     }
 
     @Test func soundTableAndPitch() {
-        #expect(FeedbackCue.correct(streak: 1).sound == SoundCue(asset: .correct, semitones: 0))
-        #expect(FeedbackCue.correct(streak: 7).sound == SoundCue(asset: .correct, semitones: 6))
-        #expect(FeedbackCue.streakMilestone(streak: 20).sound == SoundCue(asset: .correct, semitones: 12))
-        #expect(FeedbackCue.wrong.sound == SoundCue(asset: .wrong, semitones: 0))
-        #expect(FeedbackCue.timedOut.sound == SoundCue(asset: .timeout, semitones: 0))
-        #expect(FeedbackCue.roundStarted.sound == SoundCue(asset: .roundStart, semitones: 0))
-        #expect(FeedbackCue.perfectRound.sound == SoundCue(asset: .perfect, semitones: 0))
-        #expect(FeedbackCue.runEnded.sound == SoundCue(asset: .runEnd, semitones: 0))
+        #expect(FeedbackCue.correct(streak: 1).sound == .correct(semitones: 0))
+        #expect(FeedbackCue.correct(streak: 7).sound == .correct(semitones: 6))
+        #expect(FeedbackCue.streakMilestone(streak: 20).sound == .correct(semitones: 12))
+        #expect(FeedbackCue.wrong.sound == .wrong)
+        #expect(FeedbackCue.timedOut.sound == .timeout)
+        #expect(FeedbackCue.roundStarted.sound == .roundStart)
+        #expect(FeedbackCue.perfectRound.sound == .perfect)
+        #expect(FeedbackCue.runEnded.sound == .runEnd)
         #expect(FeedbackCue.lifeEarned.sound == nil)
     }
 
     @Test func everySoundAssetIsBundled() {
+        #expect(SoundAsset.allCases.count == 18)
         for asset in SoundAsset.allCases {
-            #expect(Bundle.main.url(forResource: asset.rawValue, withExtension: "wav") != nil, "missing \(asset.rawValue).wav")
+            #expect(Bundle.main.url(forResource: asset.fileName, withExtension: "wav") != nil, "missing \(asset.fileName).wav")
         }
     }
 }
@@ -4142,29 +4144,46 @@ import AVFoundation
 import OSLog
 import SwipeSortEngine
 
-enum SoundAsset: String, CaseIterable, Sendable {
-    case correct, wrong, timeout, roundStart, perfect, runEnd
-}
+/// Every bundled sound. watchOS has no time-pitch audio unit, so the correct sound
+/// ships as 13 pre-rendered variants, one per semitone from 0 to 12.
+enum SoundAsset: Hashable, Sendable {
+    case correct(semitones: Int)
+    case wrong
+    case timeout
+    case roundStart
+    case perfect
+    case runEnd
 
-struct SoundCue: Equatable, Sendable {
-    var asset: SoundAsset
-    /// Pitch shift applied through the time-pitch unit.
-    var semitones: Int
+    static let maximumSemitones = 12
+
+    static var allCases: [SoundAsset] {
+        (0...maximumSemitones).map { .correct(semitones: $0) } + [.wrong, .timeout, .roundStart, .perfect, .runEnd]
+    }
+
+    var fileName: String {
+        switch self {
+        case .correct(let semitones): String(format: "correct-%02d", semitones)
+        case .wrong: "wrong"
+        case .timeout: "timeout"
+        case .roundStart: "roundStart"
+        case .perfect: "perfect"
+        case .runEnd: "runEnd"
+        }
+    }
 }
 
 extension FeedbackCue {
-    static let maximumSemitones = 12
-
-    /// The sound a cue plays (spec 5.2). The correct sound rises one semitone per streak step.
-    var sound: SoundCue? {
+    /// The sound a cue plays (spec 5.2). The correct sound rises one semitone per
+    /// streak step and is capped; the streak resets on any error, so the pitch does too.
+    var sound: SoundAsset? {
         switch self {
         case .correct(let streak), .streakMilestone(let streak):
-            SoundCue(asset: .correct, semitones: min(max(streak - 1, 0), Self.maximumSemitones))
-        case .wrong: SoundCue(asset: .wrong, semitones: 0)
-        case .timedOut: SoundCue(asset: .timeout, semitones: 0)
-        case .roundStarted: SoundCue(asset: .roundStart, semitones: 0)
-        case .perfectRound: SoundCue(asset: .perfect, semitones: 0)
-        case .runEnded: SoundCue(asset: .runEnd, semitones: 0)
+            .correct(semitones: min(max(streak - 1, 0), SoundAsset.maximumSemitones))
+        case .wrong: .wrong
+        case .timedOut: .timeout
+        case .roundStarted: .roundStart
+        case .perfectRound: .perfect
+        case .runEnded: .runEnd
         case .lifeEarned: nil
         }
     }
@@ -4180,7 +4199,7 @@ final class SilentSound: SoundService {
     func play(_ cue: FeedbackCue) {}
 }
 
-/// Plays the bundled sounds through an AVAudioEngine graph with a time-pitch unit.
+/// Plays the bundled sounds through an AVAudioEngine player node.
 /// Any setup failure disables sound for the session and leaves gameplay untouched.
 @MainActor
 final class EngineSound: SoundService {
@@ -4189,7 +4208,6 @@ final class EngineSound: SoundService {
     var isEnabled: Bool
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
-    private let timePitch = AVAudioUnitTimePitch()
     private var buffers: [SoundAsset: AVAudioPCMBuffer] = [:]
     private var isReady = false
 
@@ -4209,7 +4227,7 @@ final class EngineSound: SoundService {
         try session.setActive(true)
 
         for asset in SoundAsset.allCases {
-            guard let url = bundle.url(forResource: asset.rawValue, withExtension: "wav") else {
+            guard let url = bundle.url(forResource: asset.fileName, withExtension: "wav") else {
                 throw CocoaError(.fileNoSuchFile)
             }
             let file = try AVAudioFile(forReading: url)
@@ -4220,24 +4238,21 @@ final class EngineSound: SoundService {
             buffers[asset] = buffer
         }
 
-        guard let format = buffers[.correct]?.format else { throw CocoaError(.fileReadCorruptFile) }
+        guard let format = buffers[.wrong]?.format else { throw CocoaError(.fileReadCorruptFile) }
         engine.attach(player)
-        engine.attach(timePitch)
-        engine.connect(player, to: timePitch, format: format)
-        engine.connect(timePitch, to: engine.mainMixerNode, format: format)
+        engine.connect(player, to: engine.mainMixerNode, format: format)
         engine.prepare()
         try engine.start()
     }
 
     func play(_ cue: FeedbackCue) {
-        guard isEnabled, isReady, let sound = cue.sound, let buffer = buffers[sound.asset] else { return }
+        guard isEnabled, isReady, let asset = cue.sound, let buffer = buffers[asset] else { return }
         if !engine.isRunning {
             do { try engine.start() } catch {
                 Self.logger.error("Engine restart failed: \(String(describing: error), privacy: .public)")
                 return
             }
         }
-        timePitch.pitch = Float(sound.semitones * 100)
         player.scheduleBuffer(buffer, at: nil, options: .interrupts)
         if !player.isPlaying {
             player.play()
@@ -4307,7 +4322,6 @@ def write(name, samples):
 
 
 SOUNDS = {
-    "correct": tone(880, 110, harmonics=(1.0, 0.3)),
     "wrong": tone(110, 180, volume=0.7, harmonics=(1.0, 0.6, 0.4), decay_power=1.2),
     "timeout": sweep(600, 180, 220),
     "roundStart": tone(660, 90) + tone(990, 170),
@@ -4315,13 +4329,17 @@ SOUNDS = {
     "runEnd": tone(784, 120) + tone(659, 120) + tone(523, 260, harmonics=(1.0, 0.4)),
 }
 
+# watchOS has no time-pitch unit, so the correct sound is rendered once per semitone.
+for semitones in range(13):
+    SOUNDS[f"correct-{semitones:02d}"] = tone(880 * 2 ** (semitones / 12), 110, harmonics=(1.0, 0.3))
+
 if __name__ == "__main__":
     for name, samples in SOUNDS.items():
         write(name, samples)
 ```
 
 Run: `python3 Tools/generate_sounds.py`
-Expected: six `wrote WatchGame/Resources/Sounds/<name>.wav` lines, each under 300 ms except `perfect` and `runEnd` which are under 500 ms.
+Expected: eighteen `wrote WatchGame/Resources/Sounds/<name>.wav` lines: the thirteen `correct-NN` variants at 110 ms, `wrong` 180 ms, `timeout` 220 ms, `roundStart` 260 ms, `perfect` 440 ms and `runEnd` 500 ms. watchOS has no `AVAudioUnitTimePitch`, which is why the correct sound is rendered once per semitone rather than pitch-shifted at runtime.
 
 - [ ] **Step 6: Run the tests to verify they pass**
 
