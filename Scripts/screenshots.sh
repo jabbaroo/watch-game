@@ -15,7 +15,7 @@ for device in "${DEVICES[@]}"; do
   xcrun simctl boot "$udid" 2>/dev/null || true
   xcrun simctl bootstatus "$udid" -b >/dev/null
   xcrun simctl install "$udid" "$APP"
-  xcrun simctl launch "$udid" com.pynto.swipesort.watchkitapp >/dev/null
+  xcrun simctl launch "$udid" com.pynto.sortsprint.watchkitapp >/dev/null
   sleep 3
   slug=$(echo "$device" | tr -cd '[:alnum:]' )
   xcrun simctl io "$udid" screenshot "$OUT/$slug-home.png" >/dev/null

@@ -77,10 +77,10 @@ struct DailyWidgetView: View {
 @main
 struct WatchGameWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "com.pynto.swipesort.daily", provider: DailyProvider()) { entry in
+        StaticConfiguration(kind: "com.pynto.sortsprint.daily", provider: DailyProvider()) { entry in
             DailyWidgetView(entry: entry)
                 .containerBackground(.fill.tertiary, for: .widget)
-                .widgetURL(URL(string: "swipesort://daily"))
+                .widgetURL(URL(string: "sortsprint://daily"))
         }
         .configurationDisplayName("Daily challenge")
         .description("Today's status and your streak.")

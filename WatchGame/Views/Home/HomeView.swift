@@ -61,7 +61,7 @@ struct HomeView: View {
                     }
                 }
             }
-            .navigationTitle("Swipe Sort")
+            .navigationTitle("Sort Sprint")
         }
         .fullScreenCover(isPresented: $isRunPresented, onDismiss: dismissRun) {
             if let session = environment.session {

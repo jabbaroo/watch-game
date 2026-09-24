@@ -2,7 +2,7 @@ import AppIntents
 
 struct StartDailyChallengeIntent: AppIntent {
     static let title: LocalizedStringResource = "Start Daily Challenge"
-    static let description = IntentDescription("Opens Swipe Sort and starts today's challenge.")
+    static let description = IntentDescription("Opens Sort Sprint and starts today's challenge.")
     static let openAppWhenRun = true
 
     @MainActor

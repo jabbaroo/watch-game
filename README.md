@@ -1,4 +1,4 @@
-# Swipe Sort
+# Sort Sprint
 
 A standalone Apple Watch sorting game. Flick each item toward the edge that matches its category; the rule changes every round.
 
@@ -38,4 +38,4 @@ CoreSimulator scans that user-level folder for classic runtime bundles, so the r
 
 ## Release
 
-Archive the `WatchGameContainer` scheme, set `DEVELOPMENT_TEAM` in the project (or sign in to Xcode), and upload through Organizer. Bundle identifiers are `com.pynto.swipesort` (container) and `com.pynto.swipesort.watchkitapp` (watch app).
+Archive the `WatchGameContainer` scheme, set `DEVELOPMENT_TEAM` in the project (or sign in to Xcode), and upload through Organizer. Bundle identifiers are `com.pynto.sortsprint` (container) and `com.pynto.sortsprint.watchkitapp` (watch app).

@@ -1,8 +1,8 @@
-# Swipe Sort v1 Implementation Plan
+# Sort Sprint v1 Implementation Plan
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the version 1 Swipe Sort watchOS game described in `docs/superpowers/specs/2026-09-24-swipe-sort-design.md`: a standalone, paid, App Store ready Apple Watch sorting game with a deterministic engine, haptic-first feedback, local history and a Smart Stack widget.
+**Goal:** Build the version 1 Sort Sprint watchOS game described in `docs/superpowers/specs/2026-09-24-swipe-sort-design.md`: a standalone, paid, App Store ready Apple Watch sorting game with a deterministic engine, haptic-first feedback, local history and a Smart Stack widget.
 
 **Architecture:** A pure Swift package `SwipeSortEngine` holds all game rules as `Sendable` value types driven by explicit events and a caller-supplied clock, tested on macOS with `swift test`. A watchOS app target `WatchGame` wraps the engine in an `@Observable` session, SwiftUI views, feedback services and SwiftData persistence. An iOS container target exists only because Apple's watch-only app packaging requires it.
 
@@ -3265,7 +3265,7 @@ The project is written by hand in the Xcode 16+ format with file system synchron
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Swipe Sort";
+				INFOPLIST_KEY_CFBundleDisplayName = "Sort Sprint";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKWatchOnly = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -3273,7 +3273,7 @@ The project is written by hand in the Xcode 16+ format with file system synchron
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.pynto.swipesort.watchkitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pynto.sortsprint.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -3293,7 +3293,7 @@ The project is written by hand in the Xcode 16+ format with file system synchron
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Swipe Sort";
+				INFOPLIST_KEY_CFBundleDisplayName = "Sort Sprint";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKWatchOnly = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -3301,7 +3301,7 @@ The project is written by hand in the Xcode 16+ format with file system synchron
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.pynto.swipesort.watchkitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pynto.sortsprint.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -3318,10 +3318,10 @@ The project is written by hand in the Xcode 16+ format with file system synchron
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Swipe Sort";
+				INFOPLIST_KEY_CFBundleDisplayName = "Sort Sprint";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.pynto.swipesort;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pynto.sortsprint;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -3335,10 +3335,10 @@ The project is written by hand in the Xcode 16+ format with file system synchron
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Swipe Sort";
+				INFOPLIST_KEY_CFBundleDisplayName = "Sort Sprint";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.pynto.swipesort;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pynto.sortsprint;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -3354,7 +3354,7 @@ The project is written by hand in the Xcode 16+ format with file system synchron
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.pynto.swipesort.watchkitapp.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pynto.sortsprint.watchkitapp.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -3373,7 +3373,7 @@ The project is written by hand in the Xcode 16+ format with file system synchron
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.pynto.swipesort.watchkitapp.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pynto.sortsprint.watchkitapp.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -3568,7 +3568,7 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 8) {
-                Text("Swipe Sort")
+                Text("Sort Sprint")
                     .font(.headline)
                 Text("\(ContentPack.shapesAndColours.items.count) items ready")
                     .font(.footnote)
@@ -3944,7 +3944,7 @@ import SwipeSortEngine
 /// The packs available to play: the built-in shapes pack first, then every valid
 /// `*.pack.json` in the bundle, sorted by file name.
 enum PackLoader {
-    private static let logger = Logger(subsystem: "com.pynto.swipesort", category: "packs")
+    private static let logger = Logger(subsystem: "com.pynto.sortsprint", category: "packs")
 
     static func loadPacks(from bundle: Bundle = .main) -> [ContentPack] {
         var packs = [ContentPack.shapesAndColours]
@@ -4543,7 +4543,7 @@ import SwipeSortEngine
 @MainActor
 final class HistoryStore {
     static let schema = Schema([RunEntry.self, RoundEntry.self, ItemEntry.self])
-    private static let logger = Logger(subsystem: "com.pynto.swipesort", category: "history")
+    private static let logger = Logger(subsystem: "com.pynto.sortsprint", category: "history")
 
     /// Retained on purpose: a ModelContext does not keep its container alive.
     let container: ModelContainer
@@ -4869,7 +4869,7 @@ final class SilentSound: SoundService {
 /// Any setup failure disables sound for the session and leaves gameplay untouched.
 @MainActor
 final class EngineSound: SoundService {
-    private static let logger = Logger(subsystem: "com.pynto.swipesort", category: "sound")
+    private static let logger = Logger(subsystem: "com.pynto.sortsprint", category: "sound")
 
     var isEnabled: Bool
     private let engine = AVAudioEngine()
@@ -5277,7 +5277,7 @@ final class AppEnvironment {
 }
 
 extension AppEnvironment {
-    private static let widgetLogger = Logger(subsystem: "com.pynto.swipesort", category: "widget")
+    private static let widgetLogger = Logger(subsystem: "com.pynto.sortsprint", category: "widget")
 
     /// Writes the widget summary and asks WidgetKit to refresh. Safe to call often.
     func refreshWidgetSummary(now: Date = .now) {
@@ -5526,7 +5526,7 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 8) {
-                Text("Swipe Sort")
+                Text("Sort Sprint")
                     .font(.headline)
                 Text("\(environment.pack.items.count) items ready")
                     .font(.footnote)
@@ -6764,8 +6764,8 @@ import Testing
     }
 
     @Test func dailyURLIsRecognised() {
-        #expect(LaunchRequests.isDailyURL(URL(string: "swipesort://daily")!))
-        #expect(!LaunchRequests.isDailyURL(URL(string: "swipesort://history")!))
+        #expect(LaunchRequests.isDailyURL(URL(string: "sortsprint://daily")!))
+        #expect(!LaunchRequests.isDailyURL(URL(string: "sortsprint://history")!))
         #expect(!LaunchRequests.isDailyURL(URL(string: "https://example.com/daily")!))
     }
 }
@@ -6804,7 +6804,7 @@ final class LaunchRequests {
     }
 
     static func isDailyURL(_ url: URL) -> Bool {
-        url.scheme == "swipesort" && url.host() == "daily"
+        url.scheme == "sortsprint" && url.host() == "daily"
     }
 }
 ```
@@ -6877,7 +6877,7 @@ struct HomeView: View {
                     }
                 }
             }
-            .navigationTitle("Swipe Sort")
+            .navigationTitle("Sort Sprint")
         }
         .fullScreenCover(isPresented: $isRunPresented, onDismiss: dismissRun) {
             if let session = environment.session {
@@ -7428,7 +7428,7 @@ for device in "${DEVICES[@]}"; do
   xcrun simctl boot "$udid" 2>/dev/null || true
   xcrun simctl bootstatus "$udid" -b >/dev/null
   xcrun simctl install "$udid" "$APP"
-  xcrun simctl launch "$udid" com.pynto.swipesort.watchkitapp >/dev/null
+  xcrun simctl launch "$udid" com.pynto.sortsprint.watchkitapp >/dev/null
   sleep 3
   slug=$(echo "$device" | tr -cd '[:alnum:]' )
   xcrun simctl io "$udid" screenshot "$OUT/$slug-home.png" >/dev/null
@@ -7611,7 +7611,7 @@ Update `WatchGame/Assets.xcassets/AppIcon.appiconset/Contents.json` to reference
 `README.md`:
 
 ```markdown
-# Swipe Sort
+# Sort Sprint
 
 A standalone Apple Watch sorting game. Flick each item toward the edge that matches its category; the rule changes every round.
 
@@ -7637,7 +7637,7 @@ A standalone Apple Watch sorting game. Flick each item toward the edge that matc
 
 ## Release
 
-Archive the `WatchGameContainer` scheme, set `DEVELOPMENT_TEAM` in the project (or sign in to Xcode), and upload through Organizer. Bundle identifiers are `com.pynto.swipesort` (container) and `com.pynto.swipesort.watchkitapp` (watch app).
+Archive the `WatchGameContainer` scheme, set `DEVELOPMENT_TEAM` in the project (or sign in to Xcode), and upload through Organizer. Bundle identifiers are `com.pynto.sortsprint` (container) and `com.pynto.sortsprint.watchkitapp` (watch app).
 ```
 
 - [x] **Step 4: Build**
@@ -7726,7 +7726,7 @@ import Foundation
 
 /// The small file the app writes for the widget. Both targets compile this file.
 struct WidgetSummary: Codable, Equatable, Sendable {
-    static let appGroup = "group.com.pynto.swipesort"
+    static let appGroup = "group.com.pynto.sortsprint"
     static let fileName = "widget-summary.json"
 
     /// Local calendar day the summary describes, "yyyy-MM-dd".
@@ -7868,10 +7868,10 @@ struct DailyWidgetView: View {
 @main
 struct WatchGameWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "com.pynto.swipesort.daily", provider: DailyProvider()) { entry in
+        StaticConfiguration(kind: "com.pynto.sortsprint.daily", provider: DailyProvider()) { entry in
             DailyWidgetView(entry: entry)
                 .containerBackground(.fill.tertiary, for: .widget)
-                .widgetURL(URL(string: "swipesort://daily"))
+                .widgetURL(URL(string: "sortsprint://daily"))
         }
         .configurationDisplayName("Daily challenge")
         .description("Today's status and your streak.")
@@ -7905,7 +7905,7 @@ struct WatchGameWidget: Widget {
 <dict>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.pynto.swipesort</string>
+		<string>group.com.pynto.sortsprint</string>
 	</array>
 </dict>
 </plist>
@@ -7920,7 +7920,7 @@ struct WatchGameWidget: Widget {
 <dict>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.pynto.swipesort</string>
+		<string>group.com.pynto.sortsprint</string>
 	</array>
 </dict>
 </plist>
@@ -8033,14 +8033,14 @@ Edit `WatchGame.xcodeproj/project.pbxproj`:
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WatchGameWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Swipe Sort";
+				INFOPLIST_KEY_CFBundleDisplayName = "Sort Sprint";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.pynto.swipesort.watchkitapp.widget;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pynto.sortsprint.watchkitapp.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -8062,7 +8062,7 @@ import AppIntents
 
 struct StartDailyChallengeIntent: AppIntent {
     static let title: LocalizedStringResource = "Start Daily Challenge"
-    static let description = IntentDescription("Opens Swipe Sort and starts today's challenge.")
+    static let description = IntentDescription("Opens Sort Sprint and starts today's challenge.")
     static let openAppWhenRun = true
 
     @MainActor
@@ -8102,7 +8102,7 @@ extension AppEnvironment {
         if summary.save() {
             WidgetCenter.shared.reloadAllTimelines()
         } else {
-            Logger(subsystem: "com.pynto.swipesort", category: "widget").error("App Group container unavailable; widget summary not written")
+            Logger(subsystem: "com.pynto.sortsprint", category: "widget").error("App Group container unavailable; widget summary not written")
         }
     }
 
@@ -8126,7 +8126,7 @@ Expected: `BUILD OK`, `TESTS OK`. If the build complains that the extension need
 
 - [x] **Step 8: Verify the widget on the simulator**
 
-Install and launch the app on a booted simulator, play one daily to completion, then add the widget to the Smart Stack in the simulator (long press the watch face, Edit, add "Swipe Sort"). Expected: it shows "Daily done" and the streak. Tap it: the app opens and starts the daily (replays are allowed by spec 3.7). If a run is in progress the tap only foregrounds the app.
+Install and launch the app on a booted simulator, play one daily to completion, then add the widget to the Smart Stack in the simulator (long press the watch face, Edit, add "Sort Sprint"). Expected: it shows "Daily done" and the streak. Tap it: the app opens and starts the daily (replays are allowed by spec 3.7). If a run is in progress the tap only foregrounds the app.
 
 - [x] **Step 9: Commit**
 
@@ -8153,7 +8153,7 @@ The UI test class is declared `nonisolated` because the project defaults to main
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.pynto.swipesort.watchkitapp.uitests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pynto.sortsprint.watchkitapp.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SWIFT_EMIT_LOC_STRINGS = NO;

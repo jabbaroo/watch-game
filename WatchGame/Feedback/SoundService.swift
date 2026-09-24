@@ -61,7 +61,7 @@ final class SilentSound: SoundService {
 /// Any setup failure disables sound for the session and leaves gameplay untouched.
 @MainActor
 final class EngineSound: SoundService {
-    private static let logger = Logger(subsystem: "com.pynto.swipesort", category: "sound")
+    private static let logger = Logger(subsystem: "com.pynto.sortsprint", category: "sound")
 
     var isEnabled: Bool
     private let engine = AVAudioEngine()

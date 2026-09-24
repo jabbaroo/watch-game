@@ -7,7 +7,7 @@ import SwipeSortEngine
 @MainActor
 final class HistoryStore {
     static let schema = Schema([RunEntry.self, RoundEntry.self, ItemEntry.self])
-    private static let logger = Logger(subsystem: "com.pynto.swipesort", category: "history")
+    private static let logger = Logger(subsystem: "com.pynto.sortsprint", category: "history")
 
     /// Retained on purpose: a ModelContext does not keep its container alive.
     let container: ModelContainer

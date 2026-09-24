@@ -1,12 +1,12 @@
-# Swipe Sort: watchOS sorting game design
+# Sort Sprint: watchOS sorting game design
 
 Date: 2026-09-24
 Status: approved (revision 5; timing tuned from first play-testing on 2026-09-24)
-Working title: Swipe Sort (project and target name `WatchGame`; display name is configurable and will change when a final name is chosen)
+Name: Sort Sprint, chosen on 2026-09-24 after an App Store name check ("Sort Sprint" was the working title; "Sortie" was rejected because a strategy game and two Android sorting games already use it). Project and target name stay `WatchGame`; the engine module stays `SwipeSortEngine`, named for the mechanic.
 
 ## 1. Summary
 
-Swipe Sort is a standalone Apple Watch game. An item appears in the centre of the screen and the player flicks it toward the screen edge that matches its category. Each round has one sorting rule (for example "sort by colour") and a fixed mapping of categories to edges. Between rounds the rule changes and the edge mapping reshuffles. Re-learning the mapping after a rule switch is the cognitive hook; reaction speed under a shrinking time window is the arcade hook.
+Sort Sprint is a standalone Apple Watch game. An item appears in the centre of the screen and the player flicks it toward the screen edge that matches its category. Each round has one sorting rule (for example "sort by colour") and a fixed mapping of categories to edges. Between rounds the rule changes and the edge mapping reshuffles. Re-learning the mapping after a rule switch is the cognitive hook; reaction speed under a shrinking time window is the arcade hook.
 
 A run is 8 rounds of 40 seconds. Players have 3 lives, lose one per error, and earn one back for a perfect round. Every item answered is recorded so the results screen can break errors down, and history charts show how the player changes over time.
 
@@ -261,8 +261,8 @@ Additional packs are JSON files in the app bundle under `Packs/`. The loader dec
 
 `WatchGameWidget` (widget extension), sequenced as the last milestone after a full run plays end to end:
 
-- Shows today's daily status and the daily streak in the Smart Stack (rectangular and circular families) and deep links to the daily challenge with the URL `swipesort://daily`.
-- Data: the app writes a `WidgetSummary` JSON file (`dailyKey` as the local calendar day in `yyyy-MM-dd`, `dailyPlayedToday`, `dailyStreak`, `usualPlayHour` optional) to the App Group container `group.com.pynto.swipesort` at launch, at run end and after Reset history, then reloads widget timelines. The widget never opens the SwiftData store.
+- Shows today's daily status and the daily streak in the Smart Stack (rectangular and circular families) and deep links to the daily challenge with the URL `sortsprint://daily`.
+- Data: the app writes a `WidgetSummary` JSON file (`dailyKey` as the local calendar day in `yyyy-MM-dd`, `dailyPlayedToday`, `dailyStreak`, `usualPlayHour` optional) to the App Group container `group.com.pynto.sortsprint` at launch, at run end and after Reset history, then reloads widget timelines. The widget never opens the SwiftData store.
 - Display state is derived from the file's `dailyKey` against the current local date, never taken verbatim: if `dailyKey` is today, show the file's values; if `dailyKey` is yesterday and `dailyPlayedToday` is true, show unplayed today with the file's streak; otherwise show unplayed today with a streak of zero.
 - Timeline: an entry for now and an entry at the next local midnight, both computed with the rule above for their own dates, with reload policy at end so the provider is queried again after midnight. The status stays correct across the day boundary without the app running.
 - Deep link: the app handles `onOpenURL`. If no run is in progress it starts the daily; if a run is in progress the link is ignored.
@@ -312,7 +312,7 @@ Swift 6 language mode with strict concurrency. The engine is `Sendable` value ty
 ## 11. App Store readiness
 
 - Standalone watchOS app, paid up front. Category Games, subcategory Puzzle.
-- Bundle identifier `com.pynto.swipesort` as a placeholder until the App Store Connect record is created. It is free to change until the first upload.
+- Bundle identifier `com.pynto.sortsprint` as a placeholder until the App Store Connect record is created. It is free to change until the first upload.
 - Privacy manifest declares no tracking, no collected data, and required reasons for user defaults (CA92.1), file timestamps (C617.1) and system boot time used for elapsed-time measurement (35F9.1).
 - Age rating 4+. Accessibility nutrition label claims: VoiceOver, Reduce Motion, Differentiate Without Colour Alone, Sufficient Contrast. Larger Text is not claimed because the play screen uses fixed type sizes.
 - App icon built with Icon Composer. String Catalog for localisation with English as the base. Screenshots for each required watch size.

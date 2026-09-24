@@ -21,6 +21,6 @@ final class LaunchRequests {
     }
 
     static func isDailyURL(_ url: URL) -> Bool {
-        url.scheme == "swipesort" && url.host() == "daily"
+        url.scheme == "sortsprint" && url.host() == "daily"
     }
 }

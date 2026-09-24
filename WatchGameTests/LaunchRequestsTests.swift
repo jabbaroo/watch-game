@@ -13,8 +13,8 @@ import Testing
     }
 
     @Test func dailyURLIsRecognised() {
-        #expect(LaunchRequests.isDailyURL(URL(string: "swipesort://daily")!))
-        #expect(!LaunchRequests.isDailyURL(URL(string: "swipesort://history")!))
+        #expect(LaunchRequests.isDailyURL(URL(string: "sortsprint://daily")!))
+        #expect(!LaunchRequests.isDailyURL(URL(string: "sortsprint://history")!))
         #expect(!LaunchRequests.isDailyURL(URL(string: "https://example.com/daily")!))
     }
 }

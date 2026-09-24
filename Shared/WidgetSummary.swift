@@ -2,7 +2,7 @@ import Foundation
 
 /// The small file the app writes for the widget. Both targets compile this file.
 struct WidgetSummary: Codable, Equatable, Sendable {
-    static let appGroup = "group.com.pynto.swipesort"
+    static let appGroup = "group.com.pynto.sortsprint"
     static let fileName = "widget-summary.json"
 
     /// Local calendar day the summary describes, "yyyy-MM-dd".

@@ -5,7 +5,7 @@ import SwipeSortEngine
 /// The packs available to play: the built-in shapes pack first, then every valid
 /// `*.pack.json` in the bundle, sorted by file name (a numeric prefix sets the order on Home).
 enum PackLoader {
-    private static let logger = Logger(subsystem: "com.pynto.swipesort", category: "packs")
+    private static let logger = Logger(subsystem: "com.pynto.sortsprint", category: "packs")
 
     static func loadPacks(from bundle: Bundle = .main) -> [ContentPack] {
         var packs = [ContentPack.shapesAndColours]

@@ -97,7 +97,7 @@ final class AppEnvironment {
 }
 
 extension AppEnvironment {
-    private static let widgetLogger = Logger(subsystem: "com.pynto.swipesort", category: "widget")
+    private static let widgetLogger = Logger(subsystem: "com.pynto.sortsprint", category: "widget")
 
     /// Writes the widget summary and asks WidgetKit to refresh. Safe to call often.
     func refreshWidgetSummary(now: Date = .now) {
